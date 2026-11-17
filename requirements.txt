@@ -1,0 +1,10 @@
+# Núcleo matemático (sem SciPy obrigatório; há fallbacks em NumPy puro)
+numpy>=2.0
+
+# Camada de vídeo (decode de MP4/RTSP/HLS + detector YOLO)
+opencv-python>=4.9
+ultralytics>=8.4
+torch>=2.2          # use build CPU: pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# Opcional: acelera qui-quadrado e emparelhamento
+# scipy>=1.13

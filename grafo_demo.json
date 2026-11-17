@@ -1,0 +1,902 @@
+{
+  "nodes": [
+    {
+      "id": "v_0_0",
+      "x": 0.0,
+      "y": 0.0
+    },
+    {
+      "id": "v_0_1",
+      "x": 0.0,
+      "y": 80.0
+    },
+    {
+      "id": "v_0_2",
+      "x": 0.0,
+      "y": 160.0
+    },
+    {
+      "id": "v_0_3",
+      "x": 0.0,
+      "y": 240.0
+    },
+    {
+      "id": "v_1_0",
+      "x": 80.0,
+      "y": 0.0
+    },
+    {
+      "id": "v_1_1",
+      "x": 80.0,
+      "y": 80.0
+    },
+    {
+      "id": "v_1_2",
+      "x": 80.0,
+      "y": 160.0
+    },
+    {
+      "id": "v_1_3",
+      "x": 80.0,
+      "y": 240.0
+    },
+    {
+      "id": "v_2_0",
+      "x": 160.0,
+      "y": 0.0
+    },
+    {
+      "id": "v_2_1",
+      "x": 160.0,
+      "y": 80.0
+    },
+    {
+      "id": "v_2_2",
+      "x": 160.0,
+      "y": 160.0
+    },
+    {
+      "id": "v_2_3",
+      "x": 160.0,
+      "y": 240.0
+    },
+    {
+      "id": "v_3_0",
+      "x": 240.0,
+      "y": 0.0
+    },
+    {
+      "id": "v_3_1",
+      "x": 240.0,
+      "y": 80.0
+    },
+    {
+      "id": "v_3_2",
+      "x": 240.0,
+      "y": 160.0
+    },
+    {
+      "id": "v_3_3",
+      "x": 240.0,
+      "y": 240.0
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_v_0_0_v_1_0",
+      "source": "v_0_0",
+      "target": "v_1_0",
+      "polyline": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          80.0,
+          0.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_0_v_0_0",
+      "source": "v_1_0",
+      "target": "v_0_0",
+      "polyline": [
+        [
+          80.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_0_0_v_0_1",
+      "source": "v_0_0",
+      "target": "v_0_1",
+      "polyline": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_0_1_v_0_0",
+      "source": "v_0_1",
+      "target": "v_0_0",
+      "polyline": [
+        [
+          0.0,
+          80.0
+        ],
+        [
+          0.0,
+          0.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_0_1_v_1_1",
+      "source": "v_0_1",
+      "target": "v_1_1",
+      "polyline": [
+        [
+          0.0,
+          80.0
+        ],
+        [
+          80.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_1_v_0_1",
+      "source": "v_1_1",
+      "target": "v_0_1",
+      "polyline": [
+        [
+          80.0,
+          80.0
+        ],
+        [
+          0.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_0_1_v_0_2",
+      "source": "v_0_1",
+      "target": "v_0_2",
+      "polyline": [
+        [
+          0.0,
+          80.0
+        ],
+        [
+          0.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_0_2_v_0_1",
+      "source": "v_0_2",
+      "target": "v_0_1",
+      "polyline": [
+        [
+          0.0,
+          160.0
+        ],
+        [
+          0.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_0_2_v_1_2",
+      "source": "v_0_2",
+      "target": "v_1_2",
+      "polyline": [
+        [
+          0.0,
+          160.0
+        ],
+        [
+          80.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_2_v_0_2",
+      "source": "v_1_2",
+      "target": "v_0_2",
+      "polyline": [
+        [
+          80.0,
+          160.0
+        ],
+        [
+          0.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_0_2_v_0_3",
+      "source": "v_0_2",
+      "target": "v_0_3",
+      "polyline": [
+        [
+          0.0,
+          160.0
+        ],
+        [
+          0.0,
+          240.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_0_3_v_0_2",
+      "source": "v_0_3",
+      "target": "v_0_2",
+      "polyline": [
+        [
+          0.0,
+          240.0
+        ],
+        [
+          0.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_0_3_v_1_3",
+      "source": "v_0_3",
+      "target": "v_1_3",
+      "polyline": [
+        [
+          0.0,
+          240.0
+        ],
+        [
+          80.0,
+          240.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_3_v_0_3",
+      "source": "v_1_3",
+      "target": "v_0_3",
+      "polyline": [
+        [
+          80.0,
+          240.0
+        ],
+        [
+          0.0,
+          240.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_0_v_2_0",
+      "source": "v_1_0",
+      "target": "v_2_0",
+      "polyline": [
+        [
+          80.0,
+          0.0
+        ],
+        [
+          160.0,
+          0.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_0_v_1_0",
+      "source": "v_2_0",
+      "target": "v_1_0",
+      "polyline": [
+        [
+          160.0,
+          0.0
+        ],
+        [
+          80.0,
+          0.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_0_v_1_1",
+      "source": "v_1_0",
+      "target": "v_1_1",
+      "polyline": [
+        [
+          80.0,
+          0.0
+        ],
+        [
+          80.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_1_v_1_0",
+      "source": "v_1_1",
+      "target": "v_1_0",
+      "polyline": [
+        [
+          80.0,
+          80.0
+        ],
+        [
+          80.0,
+          0.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_1_v_2_1",
+      "source": "v_1_1",
+      "target": "v_2_1",
+      "polyline": [
+        [
+          80.0,
+          80.0
+        ],
+        [
+          160.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_1_v_1_1",
+      "source": "v_2_1",
+      "target": "v_1_1",
+      "polyline": [
+        [
+          160.0,
+          80.0
+        ],
+        [
+          80.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_1_v_1_2",
+      "source": "v_1_1",
+      "target": "v_1_2",
+      "polyline": [
+        [
+          80.0,
+          80.0
+        ],
+        [
+          80.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_2_v_1_1",
+      "source": "v_1_2",
+      "target": "v_1_1",
+      "polyline": [
+        [
+          80.0,
+          160.0
+        ],
+        [
+          80.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_2_v_2_2",
+      "source": "v_1_2",
+      "target": "v_2_2",
+      "polyline": [
+        [
+          80.0,
+          160.0
+        ],
+        [
+          160.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_2_v_1_2",
+      "source": "v_2_2",
+      "target": "v_1_2",
+      "polyline": [
+        [
+          160.0,
+          160.0
+        ],
+        [
+          80.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_2_v_1_3",
+      "source": "v_1_2",
+      "target": "v_1_3",
+      "polyline": [
+        [
+          80.0,
+          160.0
+        ],
+        [
+          80.0,
+          240.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_3_v_1_2",
+      "source": "v_1_3",
+      "target": "v_1_2",
+      "polyline": [
+        [
+          80.0,
+          240.0
+        ],
+        [
+          80.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_1_3_v_2_3",
+      "source": "v_1_3",
+      "target": "v_2_3",
+      "polyline": [
+        [
+          80.0,
+          240.0
+        ],
+        [
+          160.0,
+          240.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_3_v_1_3",
+      "source": "v_2_3",
+      "target": "v_1_3",
+      "polyline": [
+        [
+          160.0,
+          240.0
+        ],
+        [
+          80.0,
+          240.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_0_v_3_0",
+      "source": "v_2_0",
+      "target": "v_3_0",
+      "polyline": [
+        [
+          160.0,
+          0.0
+        ],
+        [
+          240.0,
+          0.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_3_0_v_2_0",
+      "source": "v_3_0",
+      "target": "v_2_0",
+      "polyline": [
+        [
+          240.0,
+          0.0
+        ],
+        [
+          160.0,
+          0.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_0_v_2_1",
+      "source": "v_2_0",
+      "target": "v_2_1",
+      "polyline": [
+        [
+          160.0,
+          0.0
+        ],
+        [
+          160.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_1_v_2_0",
+      "source": "v_2_1",
+      "target": "v_2_0",
+      "polyline": [
+        [
+          160.0,
+          80.0
+        ],
+        [
+          160.0,
+          0.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_1_v_3_1",
+      "source": "v_2_1",
+      "target": "v_3_1",
+      "polyline": [
+        [
+          160.0,
+          80.0
+        ],
+        [
+          240.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_3_1_v_2_1",
+      "source": "v_3_1",
+      "target": "v_2_1",
+      "polyline": [
+        [
+          240.0,
+          80.0
+        ],
+        [
+          160.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_1_v_2_2",
+      "source": "v_2_1",
+      "target": "v_2_2",
+      "polyline": [
+        [
+          160.0,
+          80.0
+        ],
+        [
+          160.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_2_v_2_1",
+      "source": "v_2_2",
+      "target": "v_2_1",
+      "polyline": [
+        [
+          160.0,
+          160.0
+        ],
+        [
+          160.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_2_v_3_2",
+      "source": "v_2_2",
+      "target": "v_3_2",
+      "polyline": [
+        [
+          160.0,
+          160.0
+        ],
+        [
+          240.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_3_2_v_2_2",
+      "source": "v_3_2",
+      "target": "v_2_2",
+      "polyline": [
+        [
+          240.0,
+          160.0
+        ],
+        [
+          160.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_2_v_2_3",
+      "source": "v_2_2",
+      "target": "v_2_3",
+      "polyline": [
+        [
+          160.0,
+          160.0
+        ],
+        [
+          160.0,
+          240.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_3_v_2_2",
+      "source": "v_2_3",
+      "target": "v_2_2",
+      "polyline": [
+        [
+          160.0,
+          240.0
+        ],
+        [
+          160.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_2_3_v_3_3",
+      "source": "v_2_3",
+      "target": "v_3_3",
+      "polyline": [
+        [
+          160.0,
+          240.0
+        ],
+        [
+          240.0,
+          240.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_3_3_v_2_3",
+      "source": "v_3_3",
+      "target": "v_2_3",
+      "polyline": [
+        [
+          240.0,
+          240.0
+        ],
+        [
+          160.0,
+          240.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_3_0_v_3_1",
+      "source": "v_3_0",
+      "target": "v_3_1",
+      "polyline": [
+        [
+          240.0,
+          0.0
+        ],
+        [
+          240.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_3_1_v_3_0",
+      "source": "v_3_1",
+      "target": "v_3_0",
+      "polyline": [
+        [
+          240.0,
+          80.0
+        ],
+        [
+          240.0,
+          0.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_3_1_v_3_2",
+      "source": "v_3_1",
+      "target": "v_3_2",
+      "polyline": [
+        [
+          240.0,
+          80.0
+        ],
+        [
+          240.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_3_2_v_3_1",
+      "source": "v_3_2",
+      "target": "v_3_1",
+      "polyline": [
+        [
+          240.0,
+          160.0
+        ],
+        [
+          240.0,
+          80.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_3_2_v_3_3",
+      "source": "v_3_2",
+      "target": "v_3_3",
+      "polyline": [
+        [
+          240.0,
+          160.0
+        ],
+        [
+          240.0,
+          240.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    },
+    {
+      "id": "e_v_3_3_v_3_2",
+      "source": "v_3_3",
+      "target": "v_3_2",
+      "polyline": [
+        [
+          240.0,
+          240.0
+        ],
+        [
+          240.0,
+          160.0
+        ]
+      ],
+      "speed_limit": 13.9,
+      "one_way": true
+    }
+  ]
+}
