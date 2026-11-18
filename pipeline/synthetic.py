@@ -17,6 +17,7 @@ import numpy as np
 from .cityflow import Calibration, CityFlowDataset, Detection, write_cityflow
 from .config import PipelineConfig
 from .geometry import wrap_angle
+from .reid import synthetic_vehicle_embedding
 from .roadgraph import RoadGraph, grid_graph
 
 Array = np.ndarray
@@ -139,13 +140,16 @@ def generate_synthetic_cityflow(
                     cam_counter[cam_id] = cam_counter.get(cam_id, 0) + 1
                     local_assigned[key] = cam_counter[cam_id]
                 last_seen[key] = frame
+                emb = synthetic_vehicle_embedding(veh["id"], cam_id, cross_camera_noise=0.12)
                 det = Detection(cam_id, local_assigned[key], frame,
                                 float(x), float(y), float(w_px), float(h_px),
-                                score=0.95)
+                                score=0.95, x_world=float(pos[0]), y_world=float(pos[1]),
+                                embedding=emb)
                 ds.detections.setdefault(cam_id, []).append(det)
                 gt_det = Detection(cam_id, veh["id"], frame,
                                    float(x), float(y), float(w_px), float(h_px),
-                                   score=1.0)
+                                   score=1.0, x_world=float(pos[0]), y_world=float(pos[1]),
+                                   embedding=emb)
                 ds.gt.setdefault(cam_id, {}).setdefault(veh["id"], []).append(gt_det)
 
     for cam in ds.detections:

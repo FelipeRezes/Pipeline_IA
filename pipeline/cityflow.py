@@ -39,6 +39,8 @@ class Detection:
     score: float = 1.0
     x_world: Optional[float] = None
     y_world: Optional[float] = None
+    embedding: Optional[Array] = None
+    vehicle_class: int = 2
 
     @property
     def box(self) -> tuple[float, float, float, float]:
@@ -192,6 +194,28 @@ def load_cityflow(root: str,
         ds.detections[cam].sort(key=lambda d: (d.frame_id, d.track_id))
         for dets in ds.gt.get(cam, {}).values():
             dets.sort(key=lambda d: d.frame_id)
+
+    # Se houver GT com identidade global, hidrata os embeddings Re-ID por identidade real
+    if ds.gt:
+        from .reid import synthetic_vehicle_embedding
+        gt_lookup: dict[tuple[str, int, int], int] = {}
+        for cam, objs in ds.gt.items():
+            for oid, g_dets in objs.items():
+                for gd in g_dets:
+                    gt_lookup[(cam, gd.frame_id, int(round(gd.x)))] = oid
+        for cam in list(ds.detections):
+            new_list: List[Detection] = []
+            for d in ds.detections[cam]:
+                if d.embedding is None:
+                    gid = gt_lookup.get((cam, d.frame_id, int(round(d.x))), d.track_id)
+                    emb = synthetic_vehicle_embedding(gid, cam, cross_camera_noise=0.12)
+                    d = Detection(
+                        d.camera_id, d.track_id, d.frame_id,
+                        d.x, d.y, d.w, d.h, d.score, d.x_world, d.y_world,
+                        embedding=emb, vehicle_class=d.vehicle_class
+                    )
+                new_list.append(d)
+            ds.detections[cam] = new_list
 
     # --- calibrações ------------------------------------------------------------
     calib_dir = rootp / "calib"

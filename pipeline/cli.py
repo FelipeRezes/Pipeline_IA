@@ -53,7 +53,8 @@ def cmd_demo(args: argparse.Namespace) -> int:
 
 def cmd_run(args: argparse.Namespace) -> int:
     cfg = PipelineConfig(fps=args.fps, dt=1.0 / args.fps,
-                         association_mode=args.assoc_mode)
+                         association_mode=args.assoc_mode,
+                         filter_model=getattr(args, "filter_model", "adaptive_bicycle"))
     cfg.validate()
     ds = load_cityflow(args.data, detections_file=args.detections,
                        gt_file=args.gt, fps=args.fps)
@@ -77,6 +78,15 @@ def cmd_run(args: argparse.Namespace) -> int:
     print("\n=== Métricas ===")
     for k, v in report.items():
         print(f"{k:28s} {v}")
+    return 0
+
+
+def cmd_experiments(args: argparse.Namespace) -> int:
+    from .experiments import run_all_experiments
+    print("Executando bateria de experimentos científicos de ablação (A1 a A5)...")
+    suite = run_all_experiments(args.out)
+    print(json.dumps(suite, indent=2, ensure_ascii=False))
+    print(f"\nRelatório científico completo salvo em: {args.out}")
     return 0
 
 
@@ -238,11 +248,16 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--detections", default=None)
     r.add_argument("--gt", default=None)
     r.add_argument("--fps", type=float, default=10.0)
-    r.add_argument("--assoc-mode", choices=["chi2", "article"], default="chi2")
+    r.add_argument("--assoc-mode", choices=["hybrid", "chi2", "article", "reid_only"], default="hybrid")
+    r.add_argument("--filter-model", choices=["adaptive_bicycle", "canonical_bicycle", "ctrv", "linear_cv", "imm"], default="adaptive_bicycle")
     r.add_argument("--max-frames", type=int, default=0)
     r.add_argument("--out", default=None)
     r.add_argument("--max-routes-report", type=int, default=10)
     r.set_defaults(func=cmd_run)
+
+    exp = sub.add_parser("experiments", help="executa os 5 experimentos científicos de ablação (A1 a A5)")
+    exp.add_argument("--out", default="ablation_results.json", help="arquivo JSON de saída")
+    exp.set_defaults(func=cmd_experiments)
 
     dv = sub.add_parser("demo-video", help="gera vídeos e valida arquitetura ponta a ponta")
     dv.add_argument("--root", default="/tmp/opencode/cityflow_video_demo")
