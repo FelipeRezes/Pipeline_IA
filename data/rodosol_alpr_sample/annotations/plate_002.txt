@@ -1,0 +1,4 @@
+type: car
+layout: Mercosur
+plate: BRA2E19
+corners: 40,60 360,60 360,180 40,180

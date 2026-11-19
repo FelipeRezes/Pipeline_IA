@@ -1,6 +1,16 @@
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+src/*.egg-info/
 *.mp4
-weights/*.pt
+weights/
+data/cityflow/
+data/synthehicle/
+data/ua_detrac/
+data/veri776_sample/
+data/rodosol_alpr/
+data/osm/
 /tmp/

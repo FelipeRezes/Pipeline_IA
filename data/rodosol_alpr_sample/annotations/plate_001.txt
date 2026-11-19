@@ -1,0 +1,4 @@
+type: car
+layout: Brazilian
+plate: ABC1234
+corners: 40,60 360,60 360,180 40,180

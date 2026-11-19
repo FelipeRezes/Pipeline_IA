@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pipeline-ia"
+version = "0.1.0"
+description = "Strictly causal multi-camera vehicle tracking with Adaptive EKF, OSM road-graph physics, Deep Re-ID, ALPR, and CICC tactical dashboard."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.2.0,<2.8",
+    "scipy>=1.14,<2.0",
+    "pandas>=2.2.0,<3.0.0",
+    "pyarrow>=18.0.0,<24.0.0",
+    "filterpy>=1.4.5,<2.0.0",
+    "opencv-python==4.11.0.86",
+    "opencv-python-headless==4.11.0.86",
+    "ultralytics>=8.3.0",
+    "boxmot==26.0.0",
+    "onnx>=1.16.0",
+    "onnxruntime>=1.20.0",
+    "fast-alpr[onnx]>=0.4.0",
+    "osmnx>=2.0.0",
+    "leuvenmapmatching>=1.1.4",
+    "pyproj>=3.7.0",
+    "shapely>=2.1.0",
+    "networkx>=3.3",
+    "supervision>=0.25.0",
+    "matplotlib>=3.8.0",
+    "folium>=0.17.0",
+    "pydantic>=2.7.0,<3.0",
+    "pyyaml>=6.0.2",
+    "requests>=2.31.0",
+    "tqdm>=4.66",
+    "Pillow>=10.0",
+    "certifi>=2024.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.4",
+]
+gpu = [
+    "onnxruntime-gpu>=1.20.0",
+]
+# WARNING: paddleocr pulls paddlex which hard-pins opencv-contrib-python==4.10.0.84
+# and numpy<2.4, conflicting with boxmot==26.0.0 (opencv-python==4.11.0.86).
+# Only install in an isolated environment if PaddleOCR backend is explicitly required.
+alpr-paddle = [
+    "paddlepaddle>=3.0.0",
+    "paddleocr>=2.10.0",
+]
+
+[project.scripts]
+tracker-run = "tracker.pipeline:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["tracker*"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+addopts = "-ra --strict-markers"
+markers = [
+    "network: tests requiring external network downloads (skipped/mocked in offline CI)",
+    "slow: slow integration or benchmark tests",
+    "gpu: tests requiring CUDA GPU",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "tests", "scripts"]

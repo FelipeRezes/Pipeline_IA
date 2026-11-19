@@ -1,122 +1,164 @@
-# Planejamento de Engenharia e Pesquisa (`PLANEJAMENTO.md`)
+# Planejamento de Engenharia e Pesquisa — Construção do Zero (`PLANEJAMENTO.md`)
+
+> **Status do Projeto:** Reiniciado do zero (`v0.0` — Greenfield). Todo o código legado foi removido para construir uma arquitetura limpa, modular e orientada a ferramentas *open-source* consolidadas, incorporando desde o início as correções matemáticas e de engenharia identificadas na pesquisa.
+
+---
 
 ## 1. Objetivo do Sistema
 
 Rastrear veículos suspeitos em redes de câmeras urbanas **esparsas e sem sobreposição visual** (_non-overlapping FOVs_). Quando o alvo sai do campo de visão de uma câmera e entra em uma **zona cega**, o sistema:
 
-1. Propaga posição e incerteza com dinâmica veicular não linear (**EKF**);
-2. Restringe as trajetórias à malha viária da cidade (**Map-Matching em Grafo Direcionado**);
-3. Calcula a **Árvore de Rotas de Fuga Prováveis** e recomenda **Pontos de Bloqueio Policial (Cerco CICC)**;
-4. Reidentifica o veículo em outra câmera (**Associação Espaço-Temporal + Re-ID Visual / Placa**) e reconstrói a rota percorrida na zona cega (**Backtracking Forense**).
+1. **Detecta e rastreia localmente** o veículo em cada câmera, distinguindo oclusões temporárias de saídas reais do campo de visão (_Exit Zones_);
+2. **Projeta o veículo no plano do solo em metros (UTM)** usando calibração homográfica / 3D e propagação de covariância métrica;
+3. **Propaga posição e incerteza** com dinâmica veicular não linear (**EKF Adaptativo / CTRV / IMM**) estabilizado contra ruído de detecção;
+4. **Restringe as trajetórias à malha viária real (OpenStreetMap)** usando Map-Matching (HMM/Viterbi) e física de curvas;
+5. **Calcula a Árvore de Rotas de Fuga Prováveis** na zona cega (com perfil de frenagem em esquinas) e recomenda **Pontos de Bloqueio Policial (Cerco CICC)** com ETA;
+6. **Reidentifica o veículo** em outras câmeras combinando **Associação Espaço-Temporal + Deep Re-ID Visual + OCR de Placas (ALPR)** e reconstrói a rota na zona cega (**Backtracking Forense**).
 
 ```mermaid
 flowchart LR
-    A["1. Vídeo Multicâmera\n(YOLO + ByteTrack + Re-ID)"] --> B["2. Plano de Solo\n(Homografia H / K,R,t)"]
+    A["1. Vídeo Multicâmera\n(YOLO + BoxMOT + Exit Zones)"] --> B["2. Geometria de Solo\n(Homografia H / UTM)"]
+    A --> G["2b. Identidade Visual\n(Deep Re-ID + ALPR/OCR)"]
     B --> C["3. Filtro Cinemático\n(Adaptive EKF / CTRV / IMM)"]
-    C -->|"Visível"| D["4. Grafo Viário\n(Map-Matching + Poda Física)"]
+    C -->|"Visível"| D["4. Malha Viária OSM\n(Map-Matching HMM + Física)"]
     C -->|"Zona Cega"| E["5. Árvore de Rotas\n(Propagação Multi-Hipótese)"]
-    D & E --> F["6. Fusão Intercâmeras\n& Cerco Tático (CICC)"]
+    D & E & G --> F["6. Fusão Intercâmeras\n& Dashboard Tático (CICC)"]
 ```
 
 ---
 
-## 2. O Que Já Está Feito (Base `v2.0` no Repositório)
+## 2. Stack de Ferramentas Open-Source
 
-O núcleo matemático em `pipeline/` já foi refatorado, possui **14 testes unitários e de integração aprovados** (`tests/test_pipeline.py`) e **5 experimentos de ablação automatizados** (`pipeline/experiments.py` -> `ablation_results.json`).
+Em vez de reimplementar componentes de visão computacional e geoprocessamento do zero, o projeto adota bibliotecas *open-source* maduras e foca o desenvolvimento autoral no **núcleo científico** (EKF adaptativo, propagação na zona cega, fusão espaço-temporal e recomendação de cerco).
 
-| Módulo                                          | Referência Científica                                             | Status e Funcionalidades Prontas                                                                                                                                                                                                                                                                                                                                            |
-| :---------------------------------------------- | :---------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pipeline/geometry.py`                          | _Chilgunde et al. (2004)_<br>_Bradler et al. (2021)_              | • Homografia planar $\mathbf{H}$ via DLT normalizado e calibração 3D ($\mathbf{K}, \mathbf{R}, \mathbf{t}$);<br>• Covariância métrica no solo $\mathbf{R}_k = \mathbf{J}\mathbf{\Sigma}_{\text{px}}\mathbf{J}^T$;<br>• Correção de perspectiva 3D da bounding box (**-74,3% de erro de projeção no solo**).                                                                 |
-| `pipeline/kinematics.py`<br>`pipeline/ekf.py`   | _Lou et al. (2002)_<br>_Bradler et al. (2021)_<br>_Kalman (1960)_ | • 5 filtros implementados na mesma interface: `AdaptiveEKF` (_Two-Point-Bicycle_ com fator de desvanecimento $\lambda_k$), `CanonicalBicycleEKF` ($\lambda=1$), `CoordinatedTurnEKF` (CTRV), `LinearKalmanCV` e `IMMFilter`;<br>• Redução de **76,7% no RMSE em curvas evasivas** frente ao Filtro de Kalman Linear.                                                        |
-| `pipeline/roadgraph.py`                         | _Chao et al. (2020)_<br>_Kinderby & Ridderstolpe (2024)_          | • Grafo direcionado com interpolação curvilínea `point_at_s(s)`;<br>• Poda física por **velocidade crítica de curva** ($v_{\text{crit}} = \sqrt{\mu \cdot g \cdot R_{\text{curva}}}$) e raio mínimo de giro;<br>• **Propagador Multi-Hipótese** na zona cega (`propagate_route_tree`);<br>• Map-Matching **HMM/Viterbi** e recomendação de **Pontos de Bloqueio Policial**. |
-| `pipeline/reid.py`<br>`pipeline/association.py` | _Chilgunde et al. (2004)_<br>_VeRi-776 / Zhang et al. (2025)_     | • Extrator de aparência `VehicleReIDExtractor` (HSV em 3 faixas + HOG normalizado em L2);<br>• 4 modos de associação intercâmeras (`article`, `chi2`, `reid_only`, `hybrid`) + **Backtracking Forense** da rota na zona cega (**IDF1 = 1.00 no benchmark sintético**).                                                                                                      |
-| `pipeline/video.py`<br>`pipeline/pipeline.py`   | _Medeiros et al._ (§5.3)                                          | • Pipeline **100% causal** em tempo real (sem leitura de frames futuros);<br>• Leitura de MP4/RTSP/HLS + `YOLODetector` + rastreador local em 2 estágios (**ByteTrack + Re-ID**).                                                                                                                                                                                           |
-
----
-
-## 3. O Que Precisa Melhorar (Gargalos Identificados nos Testes)
-
-A bateria de experimentos (`ablation_results.json`, `kitti_result.json` e `anpr_result.json`) revelou **5 pontos técnicos** que a equipe precisa aprimorar no código:
-
-1. **Estabilizar o Fator de Desvanecimento $\lambda_k$ sob Ruído Alto (`pipeline/ekf.py`)**:
-   - **Problema (Experimento A2):** Com ruído de detecção alto ($\sigma \ge 1.0\text{ m}$), a orientação $\theta$ calculada por $\text{atan2}(\Delta Y, \Delta X)$ sofre _jitter_. Como o peso de _Lou et al. (2002)_ para orientação é muito alto ($\alpha_\theta = 2.8$), o filtro confunde ruído de caixa com manobra brusca e infla $\lambda_k > 20$ desnecessariamente.
-   - **Solução:** Suavizar $\theta_{\text{obs}}$ em janela deslizante de 4 frames, adaptar $\alpha_\theta$ conforme a velocidade e exigir que a inovação normalizada (NIS) supere o limiar $\chi^2_{95\%}$ por 2 frames seguidos antes de ativar $\lambda_k > 1$.
-2. **Separar Oclusão Local de Entrada em Zona Cega (`pipeline/pipeline.py`)**:
-   - **Problema (`kitti_result.json`):** Perdas de detecção de $0.3\text{ s}$ no meio da imagem estavam sendo tratadas como entrada em zona cega intercâmeras (`cross_camera: false`).
-   - **Solução:** Definir **Zonas de Saída (_Exit Zones_)** nas bordas da imagem/via. O veículo só entra no estado `"blind"` (disparando árvore de rotas e associação multicâmera) quando sai pelas bordas do campo de visão da câmera. Oclusões curtas no centro da imagem ficam restritas ao buffer do rastreador local (`ByteTrack`).
-3. **Substituir Re-ID de Histograma por Modelo Deep Learning Pré-Treinado (`pipeline/reid.py`)**:
-   - **Problema:** Histogramas HSV+HOG confundem veículos de cores neutras (prata, branco, preto, cinza) sob variações de iluminação entre câmeras reais.
-   - **Solução:** Integrar pesos pré-treinados de Re-ID veicular (**OSNet** ou **ResNet50-IBN** treinados no **VeRi-776 / CityFlow** via PyTorch ou ONNX Runtime), mantendo o HSV+HOG apenas como fallback leve.
-4. **Perfil de Frenagem em Curva na Zona Cega (`pipeline/roadgraph.py`)**:
-   - **Problema:** `propagate_along_route()` propaga o veículo na zona cega com velocidade escalar constante.
-   - **Solução:** Desacelerar a hipótese até $v_{\text{crit}}$ ao passar por conversões de $\Delta\theta > 30^\circ$ e reacelerar após a esquina, melhorando a precisão do tempo estimado de chegada (ETA) na câmera seguinte.
-5. **Auto-Calibração das Constantes de Escala $C_w^{12}, C_l^{12}$ (`pipeline/association.py`)**:
-   - **Problema:** As constantes de proporcionalidade de largura/comprimento entre câmeras (_Chilgunde et al., 2004_) estão fixas em `1.0`.
-   - **Solução:** Calcular automaticamente a razão mediana das dimensões projetadas por câmera.
+| Etapa da Pipeline | Ferramentas Open-Source Recomendadas | Papel no Sistema |
+| :--- | :--- | :--- |
+| **Detecção de Veículos** | **[Ultralytics YOLO](https://github.com/ultralytics/ultralytics)** (YOLOv8 / YOLO11) ou **RT-DETR** | Detecção em tempo real de carros, motos, ônibus e caminhões (com exportação ONNX/TensorRT). |
+| **Rastreamento Local (SCT)** | **[BoxMOT](https://github.com/mikel-brostrom/boxmot)** (ByteTrack, BoT-SORT, DeepOC-SORT) | Rastreamento multi-objeto intra-câmera plugável, com suporte nativo a embeddings de aparência e compensação de movimento. |
+| **Deep Vehicle Re-ID** | **[FastReID](https://github.com/JDAI-CV/fast-reid)** (JDAI-CV) e **[TorchReID](https://github.com/KaiyangZhou/deep-person-reid)** (OSNet / ResNet50-IBN) | Extração de vetores de aparência ($L_2$-normalizados) treinados no **VeRi-776 / CityFlow**, exportáveis para **ONNX Runtime**. |
+| **Leitura de Placas (ALPR/OCR)** | **[fast-alpr](https://github.com/ankandrew/fast-alpr)** (ONNX), **[FastANPR](https://github.com/Pandede/FastANPR)** ou **YOLO + [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR)** | Detecção e leitura de placas (incluindo padrão brasileiro e Mercosul) para associação determinística quando visíveis. |
+| **Geometria & Calibração** | **OpenCV** (`cv2.findHomography`, `cv2.calibrateCamera`), **PyProj** / **Shapely** | Projeção pixel $\to$ solo (DLT / RANSAC), conversão WGS84 $\leftrightarrow$ UTM em metros e polígonos de *Exit Zones*. |
+| **Filtros Cinemáticos (EKF/IMM)** | **NumPy / SciPy** + referência **[FilterPy](https://github.com/rlabbe/filterpy)** / **[Stone Soup](https://github.com/dstl/Stone-Soup)** | Implementação limpa e vetorizada de `AdaptiveEKF` (Two-Point Bicycle), `CTRV`, `LinearCV` e `IMM` com gatilho NIS ($\chi^2$). |
+| **Malha Viária & Map-Matching** | **[OSMnx](https://github.com/gboeing/osmnx)**, **NetworkX**, **[LeuvenMapMatching](https://github.com/wannesm/LeuvenMapMatching)** (HMM/Viterbi) | Download de mapas reais do OpenStreetMap já projetados em UTM, com sentidos (`oneway`), velocidades (`maxspeed`) e faixas (`lanes`). |
+| **Referências MTMC** | **[fubel/stmc](https://github.com/fubel/stmc)**, **[regob/vehicle_mtmc](https://github.com/regob/vehicle_mtmc)**, **[Fast_Online_MTMCT](https://github.com/kamkyu94/Fast_Online_MTMCT)** | Referências abertas de associação global intercâmeras (grafos espaço-temporais, multi-cuts e métricas IDF1/MOTA/HOTA). |
+| **Visualização & Vídeo CICC** | **[Supervision](https://github.com/roboflow/supervision)** (Roboflow), **OpenCV**, **Matplotlib / Folium** | Anotação rápida de bounding boxes/trilhas, renderização *Split-Screen* (câmeras + mapa 2D tático com elipses de covariância). |
+| **Simulação & Geração de Dados** | **[CARLA Simulator](https://carla.org/)** | Criação de cenários controlados de fuga urbana com câmeras não sobrepostas, mapas OpenDRIVE e *ground-truth* exato. |
 
 ---
 
-## 4. O Que Ainda Falta Construir (Novos Módulos e Datasets)
+## 3. Bancos de Dados (Datasets) Alinhados à Lógica da Pipeline
 
-Para validar o projeto em cenários urbanos reais e entregar a demonstração final do artigo, faltam **5 entregas**:
+Os datasets abaixo foram selecionados por reproduzirem exatamente a estrutura do sistema (**câmeras fixas urbanas sem sobreposição, calibração/homografia, zonas cegas, Re-ID veicular e placas**):
 
-1. **Importador de Malha Viária Real do OpenStreetMap (`pipeline/osm_loader.py`)**:
-   - Baixar o grafo viário real de qualquer coordenada GPS / bairro (via `OSMnx` ou API Overpass / GeoJSON), converter de `lat/lon` (WGS84) para **metros (UTM)** e importar geometria real das curvas, sentidos de via (`oneway`), velocidades (`maxspeed`) e número de faixas (`lanes`).
-2. **Integração com Datasets Públicos Reais (`scripts/prepare_datasets.py`)**:
-   - **CityFlow / CityFlowV2 (AI City Challenge Track 1/3) & RoundaboutHD:** Benchmark principal para rastreamento multicâmera real com câmeras fixas não sobrepostas e homografia GPS;
-   - **UA-DETRAC:** Vídeos reais de câmeras de vigilância fixas em cruzamentos (aplicar máscara artificial de zona cega de 3 a 8 segundos no meio do vídeo para avaliar o erro em metros do EKF contra o _ground-truth_ real);
-   - **VeRi-776:** Validação da acurácia do modelo de Re-Identificação visual entre 20 câmeras;
-   - **Roboflow Universe / Kaggle:** Vídeos complementares de CFTV urbano e leitura de placas.
-3. **Módulo de Leitura de Placas / OCR (`pipeline/alpr.py`)**:
-   - Conforme a Seção 5.4 do artigo (_Densidade da Malha Viária_), integrar OCR de placas leve (ex: `EasyOCR` / `PaddleOCR` / `fast-alpr`) para zerar a incerteza do filtro e garantir associação exata quando a placa for visível.
-4. **Ferramenta de Calibração Homográfica (`pipeline/calibrator.py`)**:
-   - Script onde o operador seleciona $\ge 4$ pontos no frame da câmera e os pontos correspondentes no mapa UTM/OSM para gerar e validar automaticamente o arquivo `calib/<camera_id>.txt`.
-5. **Dashboard e Vídeo Tático CICC (`pipeline/visualizer.py`)**:
-   - Renderizador _Split-Screen_ mostrando:
-     - **Lado Esquerdo:** Câmeras sincronizadas com caixas, IDs globais, velocidade estimada em km/h e status (`VISÍVEL` / `ZONA CEGA`);
-     - **Lado Direito (Mapa 2D da Cidade):** Grafo viário com a posição dos veículos, **elipse de covariância $\mathbf{P}_k$ do EKF** expandindo na zona cega, **Árvore de Rotas de Fuga** colorida por probabilidade e **Pontos de Bloqueio Policial** recomendados com ETA.
+| Dataset | Aderência à Pipeline | O Que Contém | Uso no Projeto |
+| :--- | :--- | :--- | :--- |
+| **[CityFlow / CityFlowV2](https://www.aicitychallenge.org/)** *(AI City Challenge)* | **100% (Principal Real)** | Vídeos sincronizados de **40–46 câmeras reais** em cruzamentos urbanos (muitos sem sobreposição), **matrizes de homografia (`calibration.txt`) pixel $\to$ GPS**, timestamps e IDs globais. | Validação *end-to-end* da pipeline completa (EKF + OSM + Re-ID + Associação Intercâmeras). |
+| **[Synthehicle](https://github.com/fubel/synthehicle)** *(WACV 2023 / CARLA)* | **100% (Principal Sintético)** | **17 horas de vídeo**, 64 cenas, **340 câmeras** (sobrepostas e **não sobrepostas**), 4 climas (dia, chuva, amanhecer, noite), **homografia/calibração exata**, caixas 2D/3D e coordenadas mundiais perfeitas. | Treinamento e ablação controlada do EKF, propagação em zona cega e calibração sem ruído de GPS. |
+| **[VeRi-776](https://github.com/JDAI-CV/VeRi)** | **Re-ID Multicâmera** | **50.000+ imagens** de 776 veículos em **20 câmeras urbanas** ($1\text{ km}^2$), com topologia de câmeras, timestamps e caixas de placas. | Treino/avaliação do modelo **Deep Re-ID** (OSNet / ResNet50-IBN) entre câmeras distintas. |
+| **[VERI-Wild](https://github.com/PKU-IMRE/VERI-Wild)** | **Re-ID em Larga Escala** | **400.000+ imagens** de 40.000 veículos em **174 câmeras** ($200\text{ km}^2$) ao longo de 1 mês (dia/noite, clima severo). | Teste de robustez do Re-ID sob variações extremas de iluminação e longos intervalos de tempo. |
+| **[UA-DETRAC](https://detrac-db.rit.albany.edu/) & VRIC** | **CFTV Fixo + Máscara Cega** | 10h de CFTV urbano real em 24 cruzamentos (UA-DETRAC) e recortes multi-câmera com blur/baixa resolução (VRIC). | Aplicar **máscara artificial de zona cega (3–8 s)** no meio do vídeo para medir o RMSE (em metros) do EKF contra o *ground-truth*. |
+| **[RodoSol-ALPR](https://github.com/raysonlaroca/rodosol-alpr-dataset) & [UFPR-ALPR](https://github.com/raysonlaroca/ufpr-alpr-dataset)** | **ALPR Brasil / Mercosul** | **20.000 imagens** de carros e motos com placas **brasileiras antigas e Mercosul** (RodoSol) + 4.500 frames urbanos (UFPR). | Validação e ajuste fino do módulo de leitura de placas (`alpr.py`) para o cenário brasileiro (CICC). |
 
 ---
 
-## 5. Divisão de Tarefas (Roadmap em 4 Sprints)
+## 4. Requisitos Arquiteturais (Lições Incorporadas Desde o Dia 1)
 
-### Sprint 1 — Robustez do EKF e Cinemática na Zona Cega
+Para não repetir gargalos de versões anteriores, o novo código nasce com os seguintes requisitos obrigatórios:
 
-- [ ] Implementar filtro deslizante de orientação $\theta_{\text{obs}}$, pesos $\alpha$ dinâmicos e gatilho NIS ($\chi^2$) para estabilizar $\lambda_k$ sob ruído alto (`pipeline/ekf.py`).
-- [ ] Implementar _Exit Zones_ para separar oclusão local intra-câmera de transição real para zona cega (`pipeline/pipeline.py`).
-- [ ] Adicionar perfil de frenagem/reaceleração em esquinas na propagação cega (`pipeline/roadgraph.py`) e auto-calibração de $C_w^{12}, C_l^{12}$ (`pipeline/association.py`).
-
-### Sprint 2 — Mapas Reais (OpenStreetMap) e Calibração
-
-- [ ] Criar `pipeline/osm_loader.py` para converter mapas reais do OpenStreetMap em `RoadGraph` métrico (UTM).
-- [ ] Criar `pipeline/calibrator.py` para gerar matrizes de homografia $\mathbf{H}_i$ de câmeras reais a partir de pontos de controle no mapa.
-
-### Sprint 3 — Deep Re-ID, OCR de Placas e Benchmarks Reais
-
-- [ ] Integrar pesos pré-treinados de Deep Re-ID (`OSNet` / `ResNet50-VeRi` via ONNX/PyTorch) em `pipeline/reid.py`.
-- [ ] Implementar módulo opcional de leitura de placas `pipeline/alpr.py`.
-- [ ] Criar `scripts/prepare_datasets.py` e rodar avaliação nos datasets reais (**UA-DETRAC** com máscara de zona cega, **VeRi-776** e **CityFlowV2 / RoundaboutHD**).
-
-### Sprint 4 — Visualização CICC e Resultados Finais do Artigo
-
-- [ ] Construir `pipeline/visualizer.py` para gerar o vídeo demonstrativo _Split-Screen_ (Câmeras + Mapa Tático CICC com elipses EKF, árvore de fuga e pontos de cerco).
-- [ ] Gerar gráficos científicos (`matplotlib`) dos Experimentos A1–A5 e consolidar tabelas finais para o artigo.
+1. **Estabilidade do Fator de Desvanecimento $\lambda_k$ no EKF:**
+   - Suavização circular de $\theta_{\text{obs}}$ em janela deslizante (4 frames);
+   - Peso $\alpha_\theta(v)$ adaptativo conforme a velocidade (evitando explosão de ruído em baixas velocidades);
+   - Ativação de $\lambda_k > 1$ condicionada a **gatilho NIS ($\chi^2_{95\%}$)** persistente por $\ge 2$ frames consecutivos.
+2. **Separação Explícita entre Oclusão Local e Zona Cega (*Exit Zones*):**
+   - Cada câmera define polígonos de *Exit Zones* nas bordas do FOV / saídas de via;
+   - Oclusões curtas no centro da imagem permanecem no rastreador local (`BoxMOT`); apenas saídas pelas *Exit Zones* disparam o estado `"blind"` e a árvore de rotas.
+3. **Deep Re-ID como Padrão (ONNX):**
+   - Embeddings de 512 dimensões via **OSNet / ResNet50-IBN (VeRi-776)** em ONNX Runtime, com distância cosseno. Histograma HSV+HOG fica apenas como fallback de teste unitário offline.
+4. **Física Realista na Propagação Cega:**
+   - Cálculo de velocidade crítica em curva $v_{\text{crit}} = \sqrt{\mu \cdot g \cdot R_{\text{curva}}}$;
+   - Perfil de desaceleração antes de esquinas ($\Delta\theta > 30^\circ$) e reaceleração até `maxspeed` da via para precisão do ETA.
+5. **Auto-Calibração de Escala Intercâmeras ($C_w^{ij}, C_l^{ij}$):**
+   - Estimativa automática pela razão mediana das dimensões projetadas no solo entre pares de câmeras.
+6. **Causalidade Estrita (Tempo Real):**
+   - Toda a inferência e fusão processa estritamente até o instante $t$ (sem acesso a frames futuros).
 
 ---
 
-## 6. Comandos Rápidos para a Equipe
+## 5. Estrutura Alvo do Repositório (Do Zero)
 
-```bash
-# 1. Executar todos os testes automatizados (14 testes)
-python -m unittest discover -s tests -v
-
-# 2. Rodar os 5 Experimentos Científicos de Ablação (gera ablation_results.json)
-python -m pipeline.cli experiments --out ablation_results.json
-
-# 3. Gerar dataset multicâmera sintético e testar a pipeline híbrida
-python -m pipeline.cli demo --root data/cityflow_demo
-python -m pipeline.cli run --data data/cityflow_demo --assoc-mode hybrid --filter-model adaptive_bicycle --out resultado.json
-
-# 4. Processar vídeos reais com YOLO + ByteTrack + Re-ID + EKF + Grafo
-python -m pipeline.cli video --sources kitti_inference.mp4 --calib-dir calib --graph grafo_demo.json --weights weights/yolov8n.pt --out kitti_result.json
+```text
+Pipeline_IA/
+├── configs/                  # Arquivos YAML de câmeras, hiperparâmetros e cenários
+├── data/                     # Datasets baixados/preparados (ignorado no git)
+├── weights/                  # Pesos YOLO, OSNet/FastReID (.onnx) e ALPR (ignorado no git)
+├── scripts/
+│   ├── prepare_datasets.py   # Download/conversão de CityFlow, Synthehicle, VeRi-776, UA-DETRAC
+│   ├── calibrate_camera.py   # Ferramenta interativa para gerar homografia H (imagem <-> UTM)
+│   └── run_benchmarks.py     # Experimentos de ablação (A1–A5) e geração de gráficos
+├── src/
+│   └── tracker/
+│       ├── config.py         # Dataclasses/Pydantic de configuração
+│       ├── geometry.py       # Homografia H, calibração 3D, covariância R_k e correção bbox
+│       ├── kinematics.py     # Modelos de movimento (Two-Point Bicycle, CTRV, CV)
+│       ├── ekf.py            # AdaptiveEKF (com NIS + suavização), CanonicalEKF, CTRV, IMM
+│       ├── osm_loader.py     # Importador OpenStreetMap -> Grafo métrico UTM (OSMnx)
+│       ├── roadgraph.py      # Map-Matching (HMM/Viterbi), propagação cega com frenagem, cerco
+│       ├── detector.py       # Wrapper Ultralytics YOLO + BoxMOT + Exit Zones
+│       ├── reid.py           # Extrator Deep Re-ID (ONNX / FastReID / OSNet)
+│       ├── alpr.py           # Módulo opcional de leitura de placas (fast-alpr / PaddleOCR)
+│       ├── association.py    # Fusão espaço-temporal + Re-ID + ALPR + Backtracking Forense
+│       ├── pipeline.py       # Orquestrador multicâmera causal em tempo real
+│       └── visualizer.py     # Renderizador Split-Screen CICC (câmeras + mapa 2D tático)
+├── tests/                    # Testes unitários e de integração (pytest)
+├── pyproject.toml            # Dependências e configuração do projeto
+└── PLANEJAMENTO.md
 ```
+
+---
+
+## 6. Roadmap de Desenvolvimento (Do Zero em 5 Sprints)
+
+### Sprint 0 — Fundação, Ambiente e Datasets
+- [ ] Configurar `pyproject.toml` / `requirements.txt` limpo e estrutura `src/tracker/` + `tests/` (`pytest`).
+- [ ] Criar `scripts/prepare_datasets.py` com suporte inicial a **Synthehicle** (amostra), **CityFlow** e **UA-DETRAC** (com gerador de máscara de zona cega).
+
+### Sprint 1 — Geometria, Cinemática e EKF Estabilizado
+- [ ] Implementar `geometry.py` (DLT normalizado, projeção 3D/homografia, propagação de covariância $\mathbf{R}_k = \mathbf{J}\mathbf{\Sigma}_{\text{px}}\mathbf{J}^T$).
+- [ ] Implementar `kinematics.py` e `ekf.py` (`AdaptiveEKF` com suavização de $\theta_{\text{obs}}$ + gatilho NIS $\chi^2$, `CTRV`, `LinearCV`, `IMM`).
+- [ ] Validar com testes unitários e benchmark de ruído ($\sigma = 0.2\text{ m}$ a $1.5\text{ m}$).
+
+### Sprint 2 — Malha Viária Real (OSM), Propagação Cega e Calibração
+- [ ] Implementar `osm_loader.py` com `OSMnx` (WGS84 $\to$ UTM, `oneway`, `maxspeed`, geometria de curvas).
+- [ ] Implementar `roadgraph.py` (Map-Matching HMM/Viterbi, poda por $v_{\text{crit}}$, frenagem/reaceleração em curvas na zona cega, árvore de rotas e recomendação de bloqueio CICC).
+- [ ] Criar `scripts/calibrate_camera.py` (seleção de $\ge 4$ pontos vídeo $\leftrightarrow$ mapa UTM).
+
+### Sprint 3 — Percepção Local, Deep Re-ID e ALPR
+- [ ] Implementar `detector.py` integrando **Ultralytics YOLO** + **BoxMOT (ByteTrack/BoT-SORT)** + polígonos de **Exit Zones**.
+- [ ] Implementar `reid.py` com inferência **ONNX (OSNet / ResNet50-IBN treinado em VeRi-776)**.
+- [ ] Implementar `alpr.py` com **fast-alpr / PaddleOCR** (validado em amostras do **RodoSol-ALPR**).
+
+### Sprint 4 — Associação Intercâmeras e Orquestração Causal
+- [ ] Implementar `association.py` (associação híbrida Espaço-Temporal + Deep Re-ID + Placa, auto-calibração $C_w^{ij}, C_l^{ij}$ e Backtracking Forense).
+- [ ] Implementar `pipeline.py` (loop multicâmera estritamente causal) e validar em **Synthehicle** e **CityFlow**.
+
+### Sprint 5 — Dashboard Tático CICC e Avaliação Científica
+- [ ] Construir `visualizer.py` (*Split-Screen*: câmeras sincronizadas à esquerda + mapa 2D UTM à direita com elipses de covariância $\mathbf{P}_k$, árvore de fuga colorida por probabilidade e pontos de cerco com ETA).
+- [ ] Rodar bateria final de ablações (`scripts/run_benchmarks.py`) e gerar gráficos e tabelas para o artigo.
+
+
+---
+
+## 7. Status Atual do Código e Próximos Passos (Rumo ao Resultado Visual com Imagens Reais)
+
+> Veja também o documento dedicado [`PROXIMOS_PASSOS.md`](./PROXIMOS_PASSOS.md) para o detalhamento completo.
+
+### O Que Já Foi Implementado e Testado
+- Todos os módulos de `src/tracker/` (`config.py`, `geometry.py`, `kinematics.py`, `ekf.py`, `osm_loader.py`, `roadgraph.py`, `detector.py`, `reid.py`, `alpr.py`, `association.py`, `pipeline.py`, `visualizer.py`) e scripts em `scripts/` (`prepare_datasets.py`, `calibrate_camera.py`, `run_benchmarks.py`, `run_demo.py`) foram construídos e validados com **256 testes automatizados (`pytest`) passando**.
+
+### Próximos Passos em Etapas Curtas e Testáveis (Imagens Reais)
+1. **Passo 1 (YOLO11n + BoxMOT em Frames Reais):** Rodar `LocalPerception` com `weights/yolo11n.pt` nos frames reais de `data/ua_detrac/` e `data/synthehicle/` e salvar um frame real anotado (`step1_yolo_real_check.jpg`) para validar detecção, IDs locais e *Exit Zones*.
+2. **Passo 2 (Deep Re-ID ONNX em Recortes Reais):** Extrair embeddings 512-D (`weights/reid/osnet_x0_25_msmt17.onnx`) dos recortes reais de veículos do Passo 1 e validar que a distância cosseno separa o mesmo veículo ($< 0.30$) de veículos distintos ($> 0.45$).
+3. **Passo 3 (Leitor de Pastas de Imagens `.jpg`/`.png` e `.mp4` em `pipeline.py`):** Permitir que `CameraConfig.source` leia diretamente diretórios de frames reais além de arquivos `.mp4`.
+4. **Passo 4 (Alinhamento de Homografia e Grafo Viário com a Cena Real):** Calibrar `configs/real_demo.yaml` para que os veículos reais detectados pelo YOLO projetem exatamente sobre as arestas da via em metros UTM ($< 5\text{ m}$) com velocidade realista no `AdaptiveEKF`.
+5. **Passo 5 (Integração do `CICCVisualizer` dentro de `pipeline.run()`):** Fazer `CausalMultiCamPipeline.run()` gravar automaticamente o vídeo *Split-Screen* e snapshots `.png` (visível, zona cega com elipse EKF + árvore de fuga + cerco CICC, e re-identificação com rota forense).
+6. **Passo 6 ("Finalmentes" — Vídeo Split-Screen CICC com Imagens Reais):** Atualizar `scripts/run_demo.py` e `configs/default.yaml` para rodarem ponta a ponta nas imagens reais, gerando `data/outputs/cicc_real_demo.mp4`.

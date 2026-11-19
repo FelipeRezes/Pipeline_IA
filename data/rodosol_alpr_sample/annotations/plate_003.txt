@@ -1,0 +1,4 @@
+type: motorcycle
+layout: Brazilian
+plate: XYZ9876
+corners: 40,60 360,60 360,180 40,180

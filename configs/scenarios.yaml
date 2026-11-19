@@ -1,0 +1,104 @@
+scenarios:
+  demo_cicc_pursuit:
+    scenario_id: demo_cicc_pursuit
+    name: "CICC Split-Screen Urban Pursuit Demo"
+    description: "End-to-end 3-camera non-overlapping urban pursuit on Av. Paulista (Sao Paulo) with EKF, OSM route tree, and CICC blockade recommendation."
+    dataset: synthetic
+    ablation_id: DEMO
+    config_path: configs/cameras_demo.yaml
+    overrides:
+      duration_s: 20.0
+      fps: 15.0
+
+  synthehicle_town05:
+    scenario_id: synthehicle_town05
+    name: "Synthehicle CARLA Non-Overlapping Multi-Camera"
+    description: "CARLA-based Synthehicle multi-camera evaluation with exact world calibration and MOT ground-truth."
+    dataset: synthehicle
+    config_path: configs/cameras_demo.yaml
+    overrides:
+      sample_scene: Town01-N-day
+      cameras: ["C01", "C02"]
+      max_frames: 300
+
+  cityflow_s01:
+    scenario_id: cityflow_s01
+    name: "CityFlow Multi-Camera Urban Benchmark"
+    description: "CityFlow-layout multi-camera tracking with per-camera homography calibration.txt and MOT gt.txt."
+    dataset: cityflow
+    config_path: configs/cameras_demo.yaml
+    overrides:
+      sequence: S01_synthetic
+      cameras: ["c001", "c002", "c003"]
+
+  ua_detrac_blind_mask:
+    scenario_id: ua_detrac_blind_mask
+    name: "UA-DETRAC 5s Blind-Zone Mask Benchmark"
+    description: "Real UA-DETRAC CCTV sequence with deterministic 5.0 s artificial blind-zone blackout and full unmasked metric GT."
+    dataset: ua_detrac
+    config_path: configs/default.yaml
+    blind_mask:
+      enabled: true
+      start_s: 4.0
+      duration_s: 5.0
+    overrides:
+      sequence: detrac_100_MVI_40905
+      fps: 25.0
+
+  A1_kinematic_models:
+    scenario_id: A1_kinematic_models
+    name: "Ablation A1: Kinematic Motion Models"
+    description: "Compares LinearCV, Canonical Two-Point Bicycle, Adaptive Two-Point Bicycle, CTRV, and IMM under blind-zone propagation."
+    dataset: synthetic
+    ablation_id: A1
+    config_path: configs/default.yaml
+    blind_mask:
+      enabled: true
+      start_s: 2.5
+      duration_s: 4.0
+    overrides:
+      models: ["linear_cv", "canonical_bicycle", "adaptive_bicycle", "ctrv", "imm"]
+
+  A2_adaptive_fading:
+    scenario_id: A2_adaptive_fading
+    name: "Ablation A2: Adaptive Fading & Heading Smoothing"
+    description: "Evaluates 4-frame circular heading smoothing, speed-adaptive alpha_theta(v), and >=2-frame NIS chi2 trigger across noise levels."
+    dataset: synthetic
+    ablation_id: A2
+    config_path: configs/default.yaml
+    overrides:
+      sigma_pos_levels_m: [0.4, 1.0, 2.2]
+      models: ["canonical_bicycle", "adaptive_bicycle"]
+
+  A3_projection_bias:
+    scenario_id: A3_projection_bias
+    name: "Ablation A3: 3D BBox Contact-Point Projection Bias"
+    description: "Compares raw bottom-center (fraction=1.0) vs perspective-corrected contact point (fraction=0.90) metric ground-plane error."
+    dataset: synthehicle
+    ablation_id: A3
+    config_path: configs/cameras_demo.yaml
+    overrides:
+      fractions: [1.0, 0.90]
+
+  A4_association_ablation:
+    scenario_id: A4_association_ablation
+    name: "Ablation A4: Cross-Camera Association Modes"
+    description: "Compares article baseline, spatiotemporal chi2 only, Deep Re-ID only, and hybrid + ALPR override association."
+    dataset: synthehicle
+    ablation_id: A4
+    config_path: configs/cameras_demo.yaml
+    overrides:
+      modes: ["article", "chi2", "reid_only", "hybrid"]
+      chi2_thresh: 13.28
+
+  A5_map_matching_cicc:
+    scenario_id: A5_map_matching_cicc
+    name: "Ablation A5: HMM/Viterbi Map-Matching & CICC Corner Physics"
+    description: "Compares naive Euclidean snapping vs LeuvenMapMatching HMM/Viterbi with v_crit pruning and pre-corner braking."
+    dataset: synthetic
+    ablation_id: A5
+    config_path: configs/cameras_demo.yaml
+    overrides:
+      obs_noise_m: 9.5
+      mu_friction: 0.7
+      corner_angle_deg: 30.0

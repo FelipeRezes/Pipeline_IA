@@ -1,0 +1,172 @@
+{
+  "A1": {
+    "experiment": "A1",
+    "description": "Comparison of 5 kinematic filters across straight, evasive turn, and blind-zone outage regimes.",
+    "results": {
+      "linear_cv": {
+        "rmse_overall_m": 4.5683,
+        "rmse_maneuver_m": 3.3276,
+        "rmse_blind_outage_m": 10.6853,
+        "max_error_m": 14.6424,
+        "lambda_mean": 1.0,
+        "lambda_max": 1.0
+      },
+      "canonical_bicycle": {
+        "rmse_overall_m": 2.588,
+        "rmse_maneuver_m": 1.1816,
+        "rmse_blind_outage_m": 6.7953,
+        "max_error_m": 9.7463,
+        "lambda_mean": 1.0,
+        "lambda_max": 1.0
+      },
+      "adaptive_bicycle": {
+        "rmse_overall_m": 0.5783,
+        "rmse_maneuver_m": 0.3418,
+        "rmse_blind_outage_m": 1.4157,
+        "max_error_m": 1.7925,
+        "lambda_mean": 1.1567,
+        "lambda_max": 6.6453
+      },
+      "ctrv": {
+        "rmse_overall_m": 0.2979,
+        "rmse_maneuver_m": 0.2249,
+        "rmse_blind_outage_m": 0.4662,
+        "max_error_m": 1.0298,
+        "lambda_mean": 1.0,
+        "lambda_max": 1.0
+      },
+      "imm": {
+        "rmse_overall_m": 0.2657,
+        "rmse_maneuver_m": 0.2212,
+        "rmse_blind_outage_m": 0.3753,
+        "max_error_m": 0.5289,
+        "lambda_mean": 1.1567,
+        "lambda_max": 6.6453
+      }
+    }
+  },
+  "A2": {
+    "experiment": "A2",
+    "description": "Stabilization of fading factor lambda_k with circular heading smoothing and NIS persistence under increasing noise.",
+    "results": {
+      "sigma_0.2m": {
+        "sigma_m": 0.2,
+        "adaptive_maneuver_rmse_m": 0.2542,
+        "canonical_maneuver_rmse_m": 0.8094,
+        "error_reduction_pct": 68.6,
+        "peak_lambda": 3.8787
+      },
+      "sigma_0.5m": {
+        "sigma_m": 0.5,
+        "adaptive_maneuver_rmse_m": 0.9013,
+        "canonical_maneuver_rmse_m": 1.922,
+        "error_reduction_pct": 53.1,
+        "peak_lambda": 5.8314
+      },
+      "sigma_1.0m": {
+        "sigma_m": 1.0,
+        "adaptive_maneuver_rmse_m": 1.5114,
+        "canonical_maneuver_rmse_m": 3.9241,
+        "error_reduction_pct": 61.49,
+        "peak_lambda": 9.4937
+      },
+      "sigma_1.5m": {
+        "sigma_m": 1.5,
+        "adaptive_maneuver_rmse_m": 3.2779,
+        "canonical_maneuver_rmse_m": 7.6648,
+        "error_reduction_pct": 57.23,
+        "peak_lambda": 8.0704
+      }
+    }
+  },
+  "A3": {
+    "experiment": "A3",
+    "description": "Ground-plane projection bias reduction via 3D perspective bounding-box contact-point correction.",
+    "results": {
+      "naive_bottom_center_mean_error_m": 0.6094,
+      "corrected_contact_point_mean_error_m": 0.12,
+      "bias_reduction_pct": 80.31
+    }
+  },
+  "A4": {
+    "experiment": "A4",
+    "description": "Cross-camera vehicle association and forensic route backtracking across 4 fusion modes.",
+    "results": {
+      "article": {
+        "idf1": 0.8333,
+        "cross_camera_accuracy": 0.8333,
+        "route_top1_accuracy": 0.8833,
+        "route_topk_accuracy": 1.0,
+        "blind_transitions": 12,
+        "throughput_fps": 1450.0
+      },
+      "chi2": {
+        "idf1": 0.5,
+        "cross_camera_accuracy": 0.5,
+        "route_top1_accuracy": 0.55,
+        "route_topk_accuracy": 1.0,
+        "blind_transitions": 12,
+        "throughput_fps": 1450.0
+      },
+      "reid_only": {
+        "idf1": 0.9167,
+        "cross_camera_accuracy": 0.9167,
+        "route_top1_accuracy": 0.9667,
+        "route_topk_accuracy": 1.0,
+        "blind_transitions": 12,
+        "throughput_fps": 1450.0
+      },
+      "hybrid": {
+        "idf1": 1.0,
+        "cross_camera_accuracy": 1.0,
+        "route_top1_accuracy": 1.0,
+        "route_topk_accuracy": 1.0,
+        "blind_transitions": 12,
+        "throughput_fps": 1320.0
+      }
+    }
+  },
+  "A5": {
+    "experiment": "A5",
+    "description": "HMM/Viterbi map-matching vs Euclidean snapping, v_crit corner pruning, and CICC blockade recommendation.",
+    "results": {
+      "map_matching_euclidean_accuracy": 0.8,
+      "map_matching_hmm_viterbi_accuracy": 1.0,
+      "high_speed_straight_top1_prob": 1.0,
+      "low_speed_turning_top1_prob": 0.5074,
+      "recommended_police_blockades": [
+        {
+          "node_id": 110,
+          "x_utm": 330200.0,
+          "y_utm": 7389800.0,
+          "interception_prob": 1.0,
+          "eta_seconds": 29.28,
+          "converging_routes": [
+            "hyp_0",
+            "hyp_1"
+          ]
+        },
+        {
+          "node_id": 102,
+          "x_utm": 330200.0,
+          "y_utm": 7390000.0,
+          "interception_prob": 0.5074,
+          "eta_seconds": 13.0,
+          "converging_routes": [
+            "hyp_0"
+          ]
+        },
+        {
+          "node_id": 103,
+          "x_utm": 330300.0,
+          "y_utm": 7390000.0,
+          "interception_prob": 0.5074,
+          "eta_seconds": 23.29,
+          "converging_routes": [
+            "hyp_0"
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,86 @@
+cameras:
+  - cam_id: cam_01
+    source: data/demo/cam_01.mp4
+    fps: 15.0
+    resolution: [1280, 720]
+    epsg_utm: 32723
+    homography:
+      - [0.035, 0.002, 330837.6]
+      - [-0.001, -0.035, 7393662.6]
+      - [0.0, 0.0, 1.0]
+    exit_zones:
+      - [[0.0, 260.0], [120.0, 260.0], [120.0, 520.0], [0.0, 520.0]]
+      - [[1160.0, 260.0], [1280.0, 260.0], [1280.0, 520.0], [1160.0, 520.0]]
+
+detector:
+  model_path: weights/yolo11n.pt
+  tracker_type: bytetrack
+  conf_thresh: 0.35
+  iou_thresh: 0.5
+  classes: [2, 3, 5, 7]
+  device: auto
+
+reid:
+  onnx_path: weights/reid/osnet_x0_25_msmt17.onnx
+  device: auto
+  input_size: [256, 128]
+  allow_hsv_fallback: false
+  embedding_dim: 512
+
+alpr:
+  enabled: true
+  backend: auto
+  min_conf: 0.5
+
+ekf:
+  model_type: adaptive_bicycle
+  wheelbase_m: 2.5
+  adaptive_fading: true
+  theta_window: 4
+  heading_gate_rad: 0.35
+  nis_alpha: 0.05
+  nis_persistence_frames: 2
+  sigma_px: [4.0, 4.0]
+  lambda_max: 25.0
+  min_speed_for_heading_mps: 1.0
+
+road_graph:
+  place_name: null
+  bbox_wgs84: [-46.6590, -23.5620, -46.6500, -23.5535]
+  graphml_cache: data/osm/sao_paulo_paulista.graphml
+  overpass_urls:
+    - https://overpass.osm.ch/api/interpreter
+    - https://api.openstreetmap.org/api/0.6/map
+    - https://overpass-api.de/api/interpreter
+  mu_friction: 0.7
+  gravity: 9.81
+  corner_angle_deg: 30.0
+  horizon_s: 15.0
+  min_branch_prob: 0.02
+
+association:
+  mode: hybrid
+  chi2_thresh: 13.28
+  w_spatiotemporal: 0.5
+  w_reid: 0.5
+  max_reid_dist: 0.45
+  use_alpr_override: true
+  alpr_override_conf: 0.85
+  auto_calibrate_scale: true
+  min_scale_samples: 5
+
+visualizer:
+  output_video: data/outputs/cicc_default.mp4
+  fps: 15.0
+  split_screen: true
+  width: 1920
+  height: 720
+  show_cov_ellipse: true
+  show_escape_tree: true
+  show_blockades: true
+  export_html: null
+
+data_dir: data
+weights_dir: weights
+strictly_causal: true
+random_seed: 42

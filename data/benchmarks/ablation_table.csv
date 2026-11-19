@@ -1,0 +1,13 @@
+experiment,metric,value
+A1,linear_cv_rmse_maneuver_m,3.3276
+A1,canonical_bicycle_rmse_maneuver_m,1.1816
+A1,adaptive_bicycle_rmse_maneuver_m,0.3418
+A1,ctrv_rmse_maneuver_m,0.2249
+A1,imm_rmse_maneuver_m,0.2212
+A2,completed,1.0
+A3,bias_reduction_pct,80.31
+A4,article_idf1,0.8333
+A4,chi2_idf1,0.5
+A4,reid_only_idf1,0.9167
+A4,hybrid_idf1,1.0
+A5,hmm_accuracy,1.0
