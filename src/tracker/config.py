@@ -342,7 +342,7 @@ class ScenarioConfig(_StrictModel):
     dataset: Literal[
         "synthehicle", "cityflow", "ua_detrac", "veri776", "rodosol_alpr", "synthetic"
     ] = "synthetic"
-    ablation_id: Literal["A1", "A2", "A3", "A4", "A5", "DEMO"] | None = None
+    ablation_id: Literal["A1", "A2", "A3", "A4", "A5", "A6", "A7", "DEMO"] | None = None
     config_path: Path | None = None
     blind_mask: BlindMaskConfig | None = None
     overrides: dict[str, Any] = Field(default_factory=dict)

@@ -259,19 +259,21 @@ class RoadGraphEngine:
         if len(pts) == 1:
             return self.map_match_euclidean(pts)
 
-        # Optionally prime LeuvenMapMatching InMemMap if available
-        try:
-            from leuvenmapmatching.map.inmem import InMemMap
-            from leuvenmapmatching.matcher.distance import DistanceMatcher
+        # Optionally prime LeuvenMapMatching InMemMap once per engine instance
+        if not getattr(self, "_inmem_primed", False):
+            try:
+                from leuvenmapmatching.map.inmem import InMemMap
+                from leuvenmapmatching.matcher.distance import DistanceMatcher
 
-            inmem = InMemMap("utm_road_graph", use_latlon=False, use_rtree=False, index_edges=True)
-            for nid, (nx_m, ny_m) in self.network.nodes_utm.items():
-                inmem.add_node(nid, (ny_m, nx_m))
-            for edge in self.network.edges.values():
-                inmem.add_edge(edge.u, edge.v)
-            _ = DistanceMatcher(inmem, max_dist=max(50.0, float(obs_noise_m) * 4.0), non_emitting_states=True)
-        except Exception:
-            pass
+                inmem = InMemMap("utm_road_graph", use_latlon=False, use_rtree=False, index_edges=True)
+                for nid, (nx_m, ny_m) in self.network.nodes_utm.items():
+                    inmem.add_node(nid, (ny_m, nx_m))
+                for edge in self.network.edges.values():
+                    inmem.add_edge(edge.u, edge.v)
+                _ = DistanceMatcher(inmem, max_dist=max(50.0, float(obs_noise_m) * 4.0), non_emitting_states=True)
+            except Exception:
+                pass
+            self._inmem_primed = True
 
         sigma = max(float(obs_noise_m), 1.0)
         beta = max(sigma * 0.8, 3.0)
@@ -284,12 +286,26 @@ class RoadGraphEngine:
         dp = np.full((n_steps, num_e), -1e12, dtype=np.float64)
         backptr = np.zeros((n_steps, num_e), dtype=np.int32)
         s_proj = np.zeros((n_steps, num_e), dtype=np.float64)
+        active_prev: list[int] = list(range(num_e))
 
         for t_idx in range(n_steps):
             px, py = float(pts[t_idx, 0]), float(pts[t_idx, 1])
+            step_projs: list[tuple[float, int, float]] = []
             for e_idx, edge in enumerate(edges_list):
                 dist, s_val, _, _, _ = _project_point_to_polyline(px, py, edge.polyline_utm)
                 s_proj[t_idx, e_idx] = s_val
+                step_projs.append((dist, e_idx, s_val))
+
+            if num_e > 24:
+                step_projs.sort(key=lambda item: item[0])
+                step_cands = step_projs[:16]
+            else:
+                step_cands = step_projs
+
+            active_curr: list[int] = []
+            for dist, e_idx, s_val in step_cands:
+                edge = edges_list[e_idx]
+                active_curr.append(e_idx)
                 # Gaussian emission log-likelihood + slight preference for primary arterial corridors
                 emit_ll = -0.5 * ((dist / sigma) ** 2) + 0.15 * (edge.lanes - 1)
                 if t_idx == 0:
@@ -299,8 +315,9 @@ class RoadGraphEngine:
                         math.hypot(px - float(pts[t_idx - 1, 0]), py - float(pts[t_idx - 1, 1]))
                     )
                     best_prev_ll = -1e12
-                    best_prev_idx = 0
-                    for p_idx, prev_edge in enumerate(edges_list):
+                    best_prev_idx = active_prev[0] if active_prev else 0
+                    for p_idx in active_prev:
+                        prev_edge = edges_list[p_idx]
                         prev_val = dp[t_idx - 1, p_idx]
                         if prev_val <= -1e11:
                             continue
@@ -335,6 +352,7 @@ class RoadGraphEngine:
 
                     dp[t_idx, e_idx] = best_prev_ll
                     backptr[t_idx, e_idx] = best_prev_idx
+            active_prev = active_curr
 
         last_idx = int(np.argmax(dp[-1]))
         seq_indices = [0] * n_steps
@@ -461,7 +479,7 @@ class RoadGraphEngine:
         ]
         finished: list[_ActiveBranch] = []
 
-        while queue and (len(queue) + len(finished) < 64):
+        while queue and (len(queue) + len(finished) < 128):
             br = queue.pop(0)
             if br.pruned or br.rem_time_s <= 1e-6:
                 finished.append(br)

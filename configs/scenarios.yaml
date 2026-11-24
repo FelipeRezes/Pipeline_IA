@@ -102,3 +102,30 @@ scenarios:
       obs_noise_m: 9.5
       mu_friction: 0.7
       corner_angle_deg: 30.0
+
+  A6_sota_comparison:
+    scenario_id: A6_sota_comparison
+    name: "Ablation A6: State-of-the-Art Baseline Comparison (PF, LSTM, GRU, T-GNN)"
+    description: "Compares Adaptive EKF and physics-constrained multi-hypothesis graph propagation against LinearCV, CTRV, IMM, SIR Particle Filter, LSTM, GRU, HMM/Viterbi, and Temporal GNN (T-GNN)."
+    dataset: synthetic
+    ablation_id: A6
+    config_path: configs/default.yaml
+    overrides:
+      kinematic_models: ["linear_cv", "canonical_bicycle", "adaptive_bicycle", "ctrv", "imm", "particle_filter", "lstm", "gru"]
+      route_models: ["euclidean_snap", "hmm_viterbi", "t_gnn", "proposed_physics_tree"]
+      num_seeds: 5
+
+  A7_city_scale_multicam:
+    scenario_id: A7_city_scale_multicam
+    name: "Ablation A7: City-Scale Multi-Camera Scalability Benchmark (4-24 Cams, 20-150 Vehicles)"
+    description: "Evaluates cross-camera association and blind-zone route prediction across 4, 8, 16, and 24 non-overlapping cameras with 20 to 150 concurrent vehicles on an 8x8 mixed urban road network."
+    dataset: synthetic
+    ablation_id: A7
+    config_path: configs/cameras_demo.yaml
+    overrides:
+      scales:
+        - {cameras: 4, vehicles: 20}
+        - {cameras: 8, vehicles: 50}
+        - {cameras: 16, vehicles: 100}
+        - {cameras: 24, vehicles: 150}
+      modes: ["article", "chi2", "reid_only", "hybrid"]

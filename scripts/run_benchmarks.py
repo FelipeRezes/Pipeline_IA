@@ -9,6 +9,7 @@ import math
 import os
 from pathlib import Path
 import sys
+import time
 from typing import Any
 
 os.environ.setdefault("MPLBACKEND", "Agg")
@@ -21,6 +22,10 @@ import numpy as np
 
 from tracker.alpr import PlateReading
 from tracker.association import BlindTrackRecord, CrossCameraAssociator, NewAppearance
+from tracker.city_benchmark import (
+    build_city_road_network,
+    evaluate_city_scale_scenario,
+)
 from tracker.config import AssociationConfig, EKFConfig, RoadGraphConfig
 from tracker.ekf import (
     AdaptiveEKF,
@@ -31,10 +36,18 @@ from tracker.ekf import (
     LinearCVFilter,
 )
 from tracker.geometry import CameraProjector
+from tracker.kinematics import wrap_angle
 from tracker.osm_loader import RoadNetwork, build_road_network_from_multidigraph
-from tracker.roadgraph import BlindHypothesis, RoadGraphEngine
+from tracker.roadgraph import BlindHypothesis, RoadGraphEngine, _interpolate_polyline
+from tracker.sota_baselines import (
+    GRUTrajectoryPredictor,
+    LSTMTrajectoryPredictor,
+    ParticleFilter,
+    TemporalGNNPredictor,
+)
 
-VALID_EXPERIMENTS = ("A1", "A2", "A3", "A4", "A5")
+DEFAULT_EXPERIMENTS = ("A1", "A2", "A3", "A4", "A5")
+VALID_EXPERIMENTS = ("A1", "A2", "A3", "A4", "A5", "A6", "A7")
 
 
 def _build_benchmark_road_network() -> tuple[RoadNetwork, RoadGraphEngine]:
@@ -425,10 +438,303 @@ def run_experiment_a5() -> dict[str, Any]:
     }
 
 
+def run_experiment_a6() -> dict[str, Any]:
+    """A6: State-of-the-Art Comparative Benchmark (EKF/IMM vs SIR Particle Filter, LSTM, GRU, T-GNN)."""
+    dt = 0.1
+    v_true = 14.0
+    sigma = 0.30
+    r_k = np.diag([sigma * sigma, sigma * sigma])
+    seeds = (1001, 1002, 1003, 1004, 1005)
+
+    # Pre-instantiate RNN models once (cached weights) so per-step inference latency is measured accurately
+    _ = LSTMTrajectoryPredictor(seed=42)
+    _ = GRUTrajectoryPredictor(seed=42)
+
+    model_factories = {
+        "linear_cv": lambda s: LinearCVFilter(),
+        "canonical_bicycle": lambda s: CanonicalEKF(),
+        "adaptive_bicycle": lambda s: AdaptiveEKF(),
+        "ctrv": lambda s: CTRVFilter(),
+        "imm": lambda s: IMMFilter(),
+        "particle_filter": lambda s: ParticleFilter(num_particles=500, seed=s),
+        "lstm": lambda s: LSTMTrajectoryPredictor(seed=42),
+        "gru": lambda s: GRUTrajectoryPredictor(seed=42),
+    }
+
+    kinematic_results: dict[str, dict[str, Any]] = {}
+    for name, factory in model_factories.items():
+        ov_rmses: list[float] = []
+        man_rmses: list[float] = []
+        blind_rmses: list[float] = []
+        ades: list[float] = []
+        fdes: list[float] = []
+        max_errs: list[float] = []
+        step_times_ms: list[float] = []
+        n_params = 0
+
+        for seed in seeds:
+            rng = np.random.default_rng(seed)
+            # 70-step urban trajectory: straight (1..20), sharp turn (21..40), blind outage (41..52), recovery (53..70)
+            gt_xy: list[tuple[float, float]] = []
+            obs_xy: list[np.ndarray] = []
+            x_c, y_c, th_c = 0.0, 0.0, 0.0
+            for k in range(1, 71):
+                omega = 1.05 if 21 <= k <= 40 else (-0.45 if 56 <= k <= 65 else 0.0)
+                if abs(omega) < 1e-9:
+                    x_c += v_true * math.cos(th_c) * dt
+                    y_c += v_true * math.sin(th_c) * dt
+                else:
+                    x_c += (v_true / omega) * (math.sin(th_c + omega * dt) - math.sin(th_c))
+                    y_c += (v_true / omega) * (-math.cos(th_c + omega * dt) + math.cos(th_c))
+                    th_c += omega * dt
+                gt_xy.append((x_c, y_c))
+                obs_xy.append(np.array([x_c, y_c]) + rng.normal(0.0, sigma, size=2))
+
+            flt = factory(seed)
+            n_params = int(getattr(flt, "num_parameters", 0))
+            flt.initialize(0.0, 0.0, v0=v_true, theta0=0.0)
+
+            all_e: list[float] = []
+            man_e: list[float] = []
+            bld_e: list[float] = []
+            t0 = time.perf_counter()
+            for k in range(1, 71):
+                st = flt.predict(dt)
+                if not (41 <= k <= 52):
+                    st = flt.update(obs_xy[k - 1], r_k, timestamp=k * dt)
+                gx, gy = gt_xy[k - 1]
+                err = math.hypot(st.x_utm - gx, st.y_utm - gy)
+                all_e.append(err)
+                if 21 <= k <= 40:
+                    man_e.append(err)
+                if 41 <= k <= 52:
+                    bld_e.append(err)
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
+            step_times_ms.append(elapsed_ms / 70.0)
+
+            ov_rmses.append(float(np.sqrt(np.mean(np.square(all_e)))))
+            man_rmses.append(float(np.sqrt(np.mean(np.square(man_e)))))
+            blind_rmses.append(float(np.sqrt(np.mean(np.square(bld_e)))))
+            ades.append(float(np.mean(bld_e)))
+            fdes.append(float(bld_e[-1]))
+            max_errs.append(float(max(all_e)))
+
+        mean_lat = float(np.mean(step_times_ms))
+        kinematic_results[name] = {
+            "rmse_overall_mean_m": round(float(np.mean(ov_rmses)), 4),
+            "rmse_overall_std_m": round(float(np.std(ov_rmses)), 4),
+            "rmse_maneuver_mean_m": round(float(np.mean(man_rmses)), 4),
+            "rmse_maneuver_std_m": round(float(np.std(man_rmses)), 4),
+            "rmse_blind_outage_mean_m": round(float(np.mean(blind_rmses)), 4),
+            "rmse_blind_outage_std_m": round(float(np.std(blind_rmses)), 4),
+            "blind_ade_m": round(float(np.mean(ades)), 4),
+            "blind_fde_m": round(float(np.mean(fdes)), 4),
+            "max_error_m": round(float(np.mean(max_errs)), 4),
+            "latency_ms_per_step": round(mean_lat, 4),
+            "throughput_steps_s": round(1000.0 / max(mean_lat, 1e-6), 1),
+            "num_parameters": n_params,
+        }
+
+    # Part 2: Road-Graph Route & Blind-Zone Prediction (Euclidean vs HMM/Viterbi vs T-GNN vs Proposed Physics Tree)
+    city_net, city_eng = build_city_road_network(grid_rows=8, grid_cols=8, block_m=120.0)
+    tgnn = TemporalGNNPredictor(city_net, hidden_dim=32, seed=42)
+
+    rng_route = np.random.default_rng(6006)
+    outgoing_map: dict[int, list[tuple[int, int, int]]] = {}
+    for eid, edge in city_net.edges.items():
+        outgoing_map.setdefault(edge.u, []).append(eid)
+
+    junction_edges = [
+        e for e in city_net.edges.values()
+        if len([ne for ne in outgoing_map.get(e.v, []) if city_net.edges[ne].v != e.u]) >= 2
+    ]
+
+    n_eval = 120
+    route_stats: dict[str, dict[str, Any]] = {
+        "euclidean_snap": {"top1": 0, "topk": 0, "pos_sq_errs": [], "invalid_turns": 0, "times_ms": [], "params": 0},
+        "hmm_viterbi": {"top1": 0, "topk": 0, "pos_sq_errs": [], "invalid_turns": 0, "times_ms": [], "params": 0},
+        "t_gnn": {"top1": 0, "topk": 0, "pos_sq_errs": [], "invalid_turns": 0, "times_ms": [], "params": tgnn.num_parameters},
+        "proposed_physics_tree": {"top1": 0, "topk": 0, "pos_sq_errs": [], "invalid_turns": 0, "times_ms": [], "params": 0},
+    }
+
+    p5 = np.diag([1.0, 1.0, 0.5, 0.04, 0.02]).astype(np.float64)
+    for _ in range(n_eval):
+        prev_e = junction_edges[int(rng_route.integers(0, len(junction_edges)))]
+        cands = [
+            eid for eid in outgoing_map.get(prev_e.v, [])
+            if city_net.edges[eid].v != prev_e.u
+        ]
+        # Vehicle approaching junction at speed v_app
+        v_app = float(rng_route.uniform(7.0, 21.0))
+        s_exit = max(10.0, prev_e.length_m - float(rng_route.uniform(12.0, 28.0)))
+        ex_x, ex_y, ex_hdg = _interpolate_polyline(prev_e.polyline_utm, s_exit)
+
+        # Ground-truth feasible driver choice respecting v_crit corner physics & arterial preference
+        cand_weights: list[float] = []
+        feasible_flags: list[bool] = []
+        d_rem = max(0.0, prev_e.length_m - s_exit)
+        v_min_junc = math.sqrt(max(0.0, v_app * v_app - 2.0 * 0.7 * 9.81 * d_rem))
+        for eid in cands:
+            ne = city_net.edges[eid]
+            v_crit, turn_deg = city_eng._edge_vcrit_and_turn_deg(prev_e, ne)
+            is_sharp = turn_deg >= 30.0
+            feasible = not (is_sharp and v_min_junc > v_crit * 1.05)
+            feasible_flags.append(feasible)
+            if not feasible:
+                cand_weights.append(0.0)
+            else:
+                dth = abs(wrap_angle(ne.heading_start_rad - prev_e.heading_end_rad))
+                w = float(ne.lanes) * (ne.maxspeed_mps / 13.89) * math.exp(-0.75 * dth)
+                cand_weights.append(max(w, 0.05))
+
+        if sum(cand_weights) <= 1e-9:
+            continue
+        p_gt = np.array(cand_weights, dtype=np.float64)
+        p_gt /= np.sum(p_gt)
+        gt_idx = int(rng_route.choice(len(cands), p=p_gt))
+        gt_edge_id = cands[gt_idx]
+        gt_edge = city_net.edges[gt_edge_id]
+
+        # Ground-truth position after 4.0 s blind outage
+        elapsed_blind = 4.0
+        t_to_junc = d_rem / max(v_app, 1.0)
+        rem_t = max(0.0, elapsed_blind - t_to_junc)
+        v_after = min(v_app, gt_edge.maxspeed_mps)
+        s_gt = min(gt_edge.length_m, rem_t * v_after)
+        gt_x, gt_y, _ = _interpolate_polyline(gt_edge.polyline_utm, s_gt)
+
+        hist = [
+            (v_app + float(rng_route.normal(0.0, 0.3)), wrap_angle(ex_hdg + float(rng_route.normal(0.0, 0.04))), 0.65 + 0.07 * i)
+            for i in range(5)
+        ]
+
+        # 1) Euclidean dead-reckoning + nearest-edge snap
+        t0 = time.perf_counter()
+        px_euc = ex_x + v_app * math.cos(ex_hdg) * elapsed_blind
+        py_euc = ex_y + v_app * math.sin(ex_hdg) * elapsed_blind
+        euc_edge, _ = city_eng.snap_initial_heading(px_euc, py_euc)
+        route_stats["euclidean_snap"]["times_ms"].append((time.perf_counter() - t0) * 1000.0)
+        if euc_edge == gt_edge_id:
+            route_stats["euclidean_snap"]["top1"] += 1
+            route_stats["euclidean_snap"]["topk"] += 1
+        route_stats["euclidean_snap"]["pos_sq_errs"].append((px_euc - gt_x) ** 2 + (py_euc - gt_y) ** 2)
+        if euc_edge in cands and not feasible_flags[cands.index(euc_edge)]:
+            route_stats["euclidean_snap"]["invalid_turns"] += 1
+
+        # 2) HMM / Viterbi on noisy approach + straight extrapolated point
+        t0 = time.perf_counter()
+        pts_hmm = np.array(
+            [
+                [ex_x - 20.0 * math.cos(ex_hdg) + rng_route.normal(0.0, 2.5), ex_y - 20.0 * math.sin(ex_hdg) + rng_route.normal(0.0, 2.5)],
+                [ex_x + rng_route.normal(0.0, 2.5), ex_y + rng_route.normal(0.0, 2.5)],
+                [px_euc + rng_route.normal(0.0, 3.0), py_euc + rng_route.normal(0.0, 3.0)],
+            ],
+            dtype=np.float64,
+        )
+        hmm_seq = city_eng.map_match_hmm_viterbi(pts_hmm, obs_noise_m=8.0)
+        hmm_edge = hmm_seq[-1] if hmm_seq else prev_e.edge_id
+        route_stats["hmm_viterbi"]["times_ms"].append((time.perf_counter() - t0) * 1000.0)
+        if hmm_edge == gt_edge_id:
+            route_stats["hmm_viterbi"]["top1"] += 1
+            route_stats["hmm_viterbi"]["topk"] += 1
+        hm_obj = city_net.edges.get(hmm_edge, prev_e)
+        hx, hy, _ = _interpolate_polyline(hm_obj.polyline_utm, min(hm_obj.length_m, rem_t * min(v_app, hm_obj.maxspeed_mps)))
+        route_stats["hmm_viterbi"]["pos_sq_errs"].append((hx - gt_x) ** 2 + (hy - gt_y) ** 2)
+        if hmm_edge in cands and not feasible_flags[cands.index(hmm_edge)]:
+            route_stats["hmm_viterbi"]["invalid_turns"] += 1
+
+        # 3) T-GNN (Temporal Graph Neural Network)
+        t0 = time.perf_counter()
+        tgnn_pred = tgnn.predict_blind_position(prev_e.edge_id, s_exit, hist, elapsed_blind)
+        route_stats["t_gnn"]["times_ms"].append((time.perf_counter() - t0) * 1000.0)
+        ranked_tgnn = [eid for eid, _ in tgnn_pred.edge_probabilities]
+        if ranked_tgnn:
+            if ranked_tgnn[0] == gt_edge_id:
+                route_stats["t_gnn"]["top1"] += 1
+            if gt_edge_id in ranked_tgnn[:2]:
+                route_stats["t_gnn"]["topk"] += 1
+            if ranked_tgnn[0] in cands and not feasible_flags[cands.index(ranked_tgnn[0])]:
+                route_stats["t_gnn"]["invalid_turns"] += 1
+        route_stats["t_gnn"]["pos_sq_errs"].append((tgnn_pred.predicted_x_utm - gt_x) ** 2 + (tgnn_pred.predicted_y_utm - gt_y) ** 2)
+
+        # 4) Proposed Physics-Constrained Multi-Hypothesis Graph Tree
+        st_exit = FilterState(np.array([ex_x, ex_y, v_app, ex_hdg, 0.0]), p5, ex_x, ex_y, v_app, ex_hdg, p5[:2, :2])
+        t0 = time.perf_counter()
+        hyps = city_eng.propagate_route_tree(st_exit, elapsed_s=elapsed_blind, dt_step=0.5)
+        route_stats["proposed_physics_tree"]["times_ms"].append((time.perf_counter() - t0) * 1000.0)
+        active = [h for h in hyps if not h.pruned_by_vcrit and h.probability > 0.0]
+        if active:
+            pred_top1_edge = active[0].edge_sequence[1] if len(active[0].edge_sequence) > 1 else active[0].current_edge
+            pred_topk_edges = [
+                (h.edge_sequence[1] if len(h.edge_sequence) > 1 else h.current_edge) for h in active[:2]
+            ]
+            if pred_top1_edge == gt_edge_id:
+                route_stats["proposed_physics_tree"]["top1"] += 1
+            if gt_edge_id in pred_topk_edges:
+                route_stats["proposed_physics_tree"]["topk"] += 1
+            if pred_top1_edge in cands and not feasible_flags[cands.index(pred_top1_edge)]:
+                route_stats["proposed_physics_tree"]["invalid_turns"] += 1
+            # Expected probability-weighted or MAP position
+            px_prop, py_prop = active[0].x_utm, active[0].y_utm
+        else:
+            px_prop, py_prop = px_euc, py_euc
+        route_stats["proposed_physics_tree"]["pos_sq_errs"].append((px_prop - gt_x) ** 2 + (py_prop - gt_y) ** 2)
+
+    route_results: dict[str, dict[str, Any]] = {}
+    for m_name, st_dict in route_stats.items():
+        n_q = max(len(st_dict["pos_sq_errs"]), 1)
+        mean_lat = float(np.mean(st_dict["times_ms"])) if st_dict["times_ms"] else 0.0
+        route_results[m_name] = {
+            "top1_route_accuracy": round(float(st_dict["top1"] / n_q), 4),
+            "topk_route_accuracy": round(float(st_dict["topk"] / n_q), 4),
+            "blind_position_rmse_m": round(float(math.sqrt(np.mean(st_dict["pos_sq_errs"]))), 4),
+            "invalid_turn_rate": round(float(st_dict["invalid_turns"] / n_q), 4),
+            "latency_ms_per_query": round(mean_lat, 4),
+            "throughput_queries_s": round(1000.0 / max(mean_lat, 1e-6), 1),
+            "num_parameters": int(st_dict["params"]),
+        }
+
+    return {
+        "experiment": "A6",
+        "description": "State-of-the-art comparison: EKF/IMM vs SIR Particle Filter, LSTM, GRU (5 seeds), and Road-Graph Route Prediction vs HMM/Viterbi and Temporal GNN (T-GNN).",
+        "results": {
+            "kinematic_and_sequence_models": kinematic_results,
+            "road_graph_route_models": route_results,
+            "num_eval_seeds": len(seeds),
+            "num_route_queries": n_eval,
+        },
+    }
+
+
+def run_experiment_a7() -> dict[str, Any]:
+    """A7: City-Scale Multi-Camera Scalability Benchmark (4-24 cameras, 20-150 vehicles on 8x8 urban network)."""
+    scales = [
+        ("S1_4cam_20veh", 4, 20),
+        ("S2_8cam_50veh", 8, 50),
+        ("S3_16cam_100veh", 16, 100),
+        ("S4_24cam_150veh", 24, 150),
+    ]
+    scale_results: dict[str, Any] = {}
+    for idx, (label, n_cams, n_vehs) in enumerate(scales):
+        scale_results[label] = evaluate_city_scale_scenario(
+            num_cameras=n_cams,
+            num_vehicles=n_vehs,
+            seed=700 + idx * 13,
+            modes=("article", "chi2", "reid_only", "hybrid"),
+        )
+
+    return {
+        "experiment": "A7",
+        "description": "City-scale multi-camera benchmark scaling from 4 to 24 non-overlapping cameras and 20 to 150 concurrent vehicles across 4 association modes.",
+        "results": scale_results,
+    }
+
+
 def _export_tables_and_figures(all_data: dict[str, Any], out_dir: Path) -> None:
     # 1. Markdown summary table
+    exp_list = ", ".join(all_data.keys())
     md_lines = [
-        "# Pipeline_IA — Scientific Ablation Benchmark Results (A1–A5)",
+        f"# Pipeline_IA — Scientific Ablation & SOTA Benchmark Results ({exp_list})",
         "",
         "| Experiment | Description | Key Metric |",
         "| :--- | :--- | :--- |",
@@ -452,6 +758,24 @@ def _export_tables_and_figures(all_data: dict[str, Any], out_dir: Path) -> None:
         elif exp_id == "A5":
             val_str = f"HMM Accuracy = {res.get('map_matching_hmm_viterbi_accuracy', 1.0)}"
             csv_rows.append([exp_id, "hmm_accuracy", str(res.get("map_matching_hmm_viterbi_accuracy", 1.0))])
+        elif exp_id == "A6":
+            kin = res.get("kinematic_and_sequence_models", {})
+            rt = res.get("road_graph_route_models", {})
+            val_str = (
+                f"Adaptive EKF Blind RMSE = {kin.get('adaptive_bicycle', {}).get('rmse_blind_outage_mean_m', 'N/A')} m; "
+                f"Proposed Tree Top-1 = {rt.get('proposed_physics_tree', {}).get('top1_route_accuracy', 'N/A')}"
+            )
+            for m_name, m_dict in kin.items():
+                csv_rows.append([exp_id, f"kin_{m_name}_maneuver_rmse_m", str(m_dict["rmse_maneuver_mean_m"])])
+                csv_rows.append([exp_id, f"kin_{m_name}_latency_ms", str(m_dict["latency_ms_per_step"])])
+            for r_name, r_dict in rt.items():
+                csv_rows.append([exp_id, f"route_{r_name}_top1", str(r_dict["top1_route_accuracy"])])
+        elif exp_id == "A7":
+            s4 = res.get("S4_24cam_150veh", {}).get("modes", {}).get("hybrid", {})
+            val_str = f"24 Cams / 150 Veh Hybrid IDF1 = {s4.get('idf1', 'N/A')}"
+            for s_label, s_dict in res.items():
+                for mode_name, m_dict in s_dict.get("modes", {}).items():
+                    csv_rows.append([exp_id, f"{s_label}_{mode_name}_idf1", str(m_dict["idf1"])])
         else:
             val_str = "Completed"
             csv_rows.append([exp_id, "completed", "1.0"])
@@ -469,7 +793,7 @@ def _export_tables_and_figures(all_data: dict[str, Any], out_dir: Path) -> None:
         names = list(a1.keys())
         vals = [a1[k]["rmse_maneuver_m"] for k in names]
         axes[0].bar(names, vals, color=["#8c96a8", "#5b84b1", "#2b9348", "#ee9b00", "#3a86ff"])
-        axes[0].set_title("A1: Evasive Maneuver RMSE (m)")
+        axes[0].set_title("A1: Nonlinear Maneuver RMSE (m)")
         axes[0].set_ylabel("RMSE (meters)")
         axes[0].tick_params(axis="x", rotation=20)
     else:
@@ -503,19 +827,24 @@ def _export_tables_and_figures(all_data: dict[str, Any], out_dir: Path) -> None:
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Execute Pipeline_IA scientific ablation experiments A1-A5."
+        description="Execute Pipeline_IA scientific ablation & SOTA benchmark experiments (A1-A7)."
     )
     parser.add_argument(
         "--out",
         type=Path,
         default=Path("data/benchmarks"),
-        help="Output directory (or JSON file path) for ablation artifacts.",
+        help="Output directory for ablation artifacts.",
     )
     parser.add_argument(
         "--experiments",
         nargs="+",
-        default=list(VALID_EXPERIMENTS),
-        help="Subset of experiments to run (choose from A1 A2 A3 A4 A5).",
+        default=list(DEFAULT_EXPERIMENTS),
+        help="Subset of experiments to run (choose from A1 A2 A3 A4 A5 A6 A7).",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Run all experiments A1 through A7 including SOTA baselines and city-scale benchmark.",
     )
     return parser
 
@@ -524,7 +853,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_arg_parser()
     args = parser.parse_args(argv)
 
-    requested = [str(e).strip().upper() for e in args.experiments]
+    requested = list(VALID_EXPERIMENTS) if args.all else [str(e).strip().upper() for e in args.experiments]
     invalid = [e for e in requested if e not in VALID_EXPERIMENTS]
     if invalid:
         print(
@@ -554,6 +883,8 @@ def main(argv: list[str] | None = None) -> int:
         "A3": run_experiment_a3,
         "A4": run_experiment_a4,
         "A5": run_experiment_a5,
+        "A6": run_experiment_a6,
+        "A7": run_experiment_a7,
     }
 
     all_results: dict[str, Any] = {}

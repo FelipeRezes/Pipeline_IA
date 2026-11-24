@@ -168,5 +168,443 @@
         }
       ]
     }
+  },
+  "A6": {
+    "experiment": "A6",
+    "description": "State-of-the-art comparison: EKF/IMM vs SIR Particle Filter, LSTM, GRU (5 seeds), and Road-Graph Route Prediction vs HMM/Viterbi and Temporal GNN (T-GNN).",
+    "results": {
+      "kinematic_and_sequence_models": {
+        "linear_cv": {
+          "rmse_overall_mean_m": 6.4274,
+          "rmse_overall_std_m": 0.0505,
+          "rmse_maneuver_mean_m": 3.5234,
+          "rmse_maneuver_std_m": 0.0814,
+          "rmse_blind_outage_mean_m": 14.4153,
+          "rmse_blind_outage_std_m": 0.0926,
+          "blind_ade_m": 13.7038,
+          "blind_fde_m": 20.8539,
+          "max_error_m": 20.8539,
+          "latency_ms_per_step": 0.1169,
+          "throughput_steps_s": 8557.1,
+          "num_parameters": 0
+        },
+        "canonical_bicycle": {
+          "rmse_overall_mean_m": 3.8655,
+          "rmse_overall_std_m": 0.0725,
+          "rmse_maneuver_mean_m": 1.257,
+          "rmse_maneuver_std_m": 0.0899,
+          "rmse_blind_outage_mean_m": 9.1636,
+          "rmse_blind_outage_std_m": 0.1639,
+          "blind_ade_m": 8.5508,
+          "blind_fde_m": 13.4756,
+          "max_error_m": 13.4756,
+          "latency_ms_per_step": 0.1789,
+          "throughput_steps_s": 5588.7,
+          "num_parameters": 0
+        },
+        "adaptive_bicycle": {
+          "rmse_overall_mean_m": 2.995,
+          "rmse_overall_std_m": 1.9172,
+          "rmse_maneuver_mean_m": 0.4068,
+          "rmse_maneuver_std_m": 0.0755,
+          "rmse_blind_outage_mean_m": 7.156,
+          "rmse_blind_outage_std_m": 4.6551,
+          "blind_ade_m": 5.9192,
+          "blind_fde_m": 12.7406,
+          "max_error_m": 12.7552,
+          "latency_ms_per_step": 0.1841,
+          "throughput_steps_s": 5432.3,
+          "num_parameters": 0
+        },
+        "ctrv": {
+          "rmse_overall_mean_m": 2.0972,
+          "rmse_overall_std_m": 1.8838,
+          "rmse_maneuver_mean_m": 0.2685,
+          "rmse_maneuver_std_m": 0.0166,
+          "rmse_blind_outage_mean_m": 4.9371,
+          "rmse_blind_outage_std_m": 4.626,
+          "blind_ade_m": 4.0329,
+          "blind_fde_m": 9.0521,
+          "max_error_m": 9.1523,
+          "latency_ms_per_step": 0.1357,
+          "throughput_steps_s": 7370.4,
+          "num_parameters": 0
+        },
+        "imm": {
+          "rmse_overall_mean_m": 2.084,
+          "rmse_overall_std_m": 0.7453,
+          "rmse_maneuver_mean_m": 0.2707,
+          "rmse_maneuver_std_m": 0.0152,
+          "rmse_blind_outage_mean_m": 4.985,
+          "rmse_blind_outage_std_m": 1.818,
+          "blind_ade_m": 3.9984,
+          "blind_fde_m": 9.4601,
+          "max_error_m": 9.4601,
+          "latency_ms_per_step": 0.4172,
+          "throughput_steps_s": 2396.7,
+          "num_parameters": 0
+        },
+        "particle_filter": {
+          "rmse_overall_mean_m": 2.1811,
+          "rmse_overall_std_m": 0.6944,
+          "rmse_maneuver_mean_m": 0.2578,
+          "rmse_maneuver_std_m": 0.0149,
+          "rmse_blind_outage_mean_m": 5.215,
+          "rmse_blind_outage_std_m": 1.7011,
+          "blind_ade_m": 4.1681,
+          "blind_fde_m": 9.8823,
+          "max_error_m": 9.8823,
+          "latency_ms_per_step": 0.3437,
+          "throughput_steps_s": 2909.8,
+          "num_parameters": 0
+        },
+        "lstm": {
+          "rmse_overall_mean_m": 2.7508,
+          "rmse_overall_std_m": 1.7347,
+          "rmse_maneuver_mean_m": 0.3349,
+          "rmse_maneuver_std_m": 0.0243,
+          "rmse_blind_outage_mean_m": 6.499,
+          "rmse_blind_outage_std_m": 4.2427,
+          "blind_ade_m": 5.1715,
+          "blind_fde_m": 12.36,
+          "max_error_m": 12.36,
+          "latency_ms_per_step": 0.4501,
+          "throughput_steps_s": 2221.6,
+          "num_parameters": 31364
+        },
+        "gru": {
+          "rmse_overall_mean_m": 1.8756,
+          "rmse_overall_std_m": 1.1834,
+          "rmse_maneuver_mean_m": 0.3327,
+          "rmse_maneuver_std_m": 0.0224,
+          "rmse_blind_outage_mean_m": 4.3782,
+          "rmse_blind_outage_std_m": 2.8726,
+          "blind_ade_m": 3.4381,
+          "blind_fde_m": 8.3654,
+          "max_error_m": 8.4845,
+          "latency_ms_per_step": 0.4051,
+          "throughput_steps_s": 2468.3,
+          "num_parameters": 23972
+        }
+      },
+      "road_graph_route_models": {
+        "euclidean_snap": {
+          "top1_route_accuracy": 0.4138,
+          "topk_route_accuracy": 0.4138,
+          "blind_position_rmse_m": 25.8777,
+          "invalid_turn_rate": 0.0,
+          "latency_ms_per_query": 0.5285,
+          "throughput_queries_s": 1892.1,
+          "num_parameters": 0
+        },
+        "hmm_viterbi": {
+          "top1_route_accuracy": 0.7069,
+          "topk_route_accuracy": 0.7069,
+          "blind_position_rmse_m": 36.6396,
+          "invalid_turn_rate": 0.0,
+          "latency_ms_per_query": 3.9138,
+          "throughput_queries_s": 255.5,
+          "num_parameters": 0
+        },
+        "t_gnn": {
+          "top1_route_accuracy": 0.7414,
+          "topk_route_accuracy": 0.9397,
+          "blind_position_rmse_m": 26.7844,
+          "invalid_turn_rate": 0.0,
+          "latency_ms_per_query": 0.326,
+          "throughput_queries_s": 3067.5,
+          "num_parameters": 8449
+        },
+        "proposed_physics_tree": {
+          "top1_route_accuracy": 0.75,
+          "topk_route_accuracy": 0.9397,
+          "blind_position_rmse_m": 22.4356,
+          "invalid_turn_rate": 0.0,
+          "latency_ms_per_query": 1.5589,
+          "throughput_queries_s": 641.5,
+          "num_parameters": 0
+        }
+      },
+      "num_eval_seeds": 5,
+      "num_route_queries": 120
+    }
+  },
+  "A7": {
+    "experiment": "A7",
+    "description": "City-scale multi-camera benchmark scaling from 4 to 24 non-overlapping cameras and 20 to 150 concurrent vehicles across 4 association modes.",
+    "results": {
+      "S1_4cam_20veh": {
+        "num_cameras": 4,
+        "num_vehicles": 20,
+        "num_nodes": 64,
+        "num_edges": 196,
+        "total_detections": 952,
+        "num_blind_transitions": 20,
+        "mean_blind_distance_m": 84.76,
+        "mean_blind_duration_s": 6.21,
+        "modes": {
+          "article": {
+            "idf1": 0.55,
+            "precision": 0.55,
+            "recall": 0.55,
+            "cross_camera_accuracy": 0.55,
+            "tp": 11,
+            "fp": 9,
+            "fn": 9,
+            "route_top1_accuracy": 0.6,
+            "route_topk_accuracy": 1.0,
+            "assoc_time_ms": 53.175,
+            "throughput_transitions_s": 376.1,
+            "throughput_detections_s": 15820.6
+          },
+          "chi2": {
+            "idf1": 0.3,
+            "precision": 0.3,
+            "recall": 0.3,
+            "cross_camera_accuracy": 0.3,
+            "tp": 6,
+            "fp": 14,
+            "fn": 14,
+            "route_top1_accuracy": 0.6,
+            "route_topk_accuracy": 1.0,
+            "assoc_time_ms": 60.621,
+            "throughput_transitions_s": 329.9,
+            "throughput_detections_s": 14078.6
+          },
+          "reid_only": {
+            "idf1": 0.9,
+            "precision": 0.9,
+            "recall": 0.9,
+            "cross_camera_accuracy": 0.9,
+            "tp": 18,
+            "fp": 2,
+            "fn": 2,
+            "route_top1_accuracy": 0.6,
+            "route_topk_accuracy": 1.0,
+            "assoc_time_ms": 60.844,
+            "throughput_transitions_s": 328.7,
+            "throughput_detections_s": 14032.2
+          },
+          "hybrid": {
+            "idf1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "cross_camera_accuracy": 1.0,
+            "tp": 20,
+            "fp": 0,
+            "fn": 0,
+            "route_top1_accuracy": 0.6,
+            "route_topk_accuracy": 1.0,
+            "assoc_time_ms": 59.566,
+            "throughput_transitions_s": 335.8,
+            "throughput_detections_s": 14301.5
+          }
+        }
+      },
+      "S2_8cam_50veh": {
+        "num_cameras": 8,
+        "num_vehicles": 50,
+        "num_nodes": 64,
+        "num_edges": 196,
+        "total_detections": 3830,
+        "num_blind_transitions": 77,
+        "mean_blind_distance_m": 84.28,
+        "mean_blind_duration_s": 6.24,
+        "modes": {
+          "article": {
+            "idf1": 0.3506,
+            "precision": 0.3506,
+            "recall": 0.3506,
+            "cross_camera_accuracy": 0.3506,
+            "tp": 27,
+            "fp": 50,
+            "fn": 50,
+            "route_top1_accuracy": 0.7273,
+            "route_topk_accuracy": 1.0,
+            "assoc_time_ms": 443.388,
+            "throughput_transitions_s": 173.7,
+            "throughput_detections_s": 8143.1
+          },
+          "chi2": {
+            "idf1": 0.1429,
+            "precision": 0.1429,
+            "recall": 0.1429,
+            "cross_camera_accuracy": 0.1429,
+            "tp": 11,
+            "fp": 66,
+            "fn": 66,
+            "route_top1_accuracy": 0.7273,
+            "route_topk_accuracy": 1.0,
+            "assoc_time_ms": 531.394,
+            "throughput_transitions_s": 144.9,
+            "throughput_detections_s": 6859.6
+          },
+          "reid_only": {
+            "idf1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "cross_camera_accuracy": 1.0,
+            "tp": 77,
+            "fp": 0,
+            "fn": 0,
+            "route_top1_accuracy": 0.7273,
+            "route_topk_accuracy": 1.0,
+            "assoc_time_ms": 541.81,
+            "throughput_transitions_s": 142.1,
+            "throughput_detections_s": 6733.9
+          },
+          "hybrid": {
+            "idf1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "cross_camera_accuracy": 1.0,
+            "tp": 77,
+            "fp": 0,
+            "fn": 0,
+            "route_top1_accuracy": 0.7273,
+            "route_topk_accuracy": 1.0,
+            "assoc_time_ms": 518.083,
+            "throughput_transitions_s": 148.6,
+            "throughput_detections_s": 7027.1
+          }
+        }
+      },
+      "S3_16cam_100veh": {
+        "num_cameras": 16,
+        "num_vehicles": 100,
+        "num_nodes": 64,
+        "num_edges": 196,
+        "total_detections": 6544,
+        "num_blind_transitions": 131,
+        "mean_blind_distance_m": 158.73,
+        "mean_blind_duration_s": 12.86,
+        "modes": {
+          "article": {
+            "idf1": 0.4656,
+            "precision": 0.4656,
+            "recall": 0.4656,
+            "cross_camera_accuracy": 0.4656,
+            "tp": 61,
+            "fp": 70,
+            "fn": 70,
+            "route_top1_accuracy": 0.6107,
+            "route_topk_accuracy": 0.8473,
+            "assoc_time_ms": 1290.011,
+            "throughput_transitions_s": 101.5,
+            "throughput_detections_s": 4898.7
+          },
+          "chi2": {
+            "idf1": 0.3282,
+            "precision": 0.3282,
+            "recall": 0.3282,
+            "cross_camera_accuracy": 0.3282,
+            "tp": 43,
+            "fp": 88,
+            "fn": 88,
+            "route_top1_accuracy": 0.6107,
+            "route_topk_accuracy": 0.8473,
+            "assoc_time_ms": 1424.787,
+            "throughput_transitions_s": 91.9,
+            "throughput_detections_s": 4449.8
+          },
+          "reid_only": {
+            "idf1": 0.8779,
+            "precision": 0.8779,
+            "recall": 0.8779,
+            "cross_camera_accuracy": 0.8779,
+            "tp": 115,
+            "fp": 16,
+            "fn": 16,
+            "route_top1_accuracy": 0.6107,
+            "route_topk_accuracy": 0.8473,
+            "assoc_time_ms": 1437.955,
+            "throughput_transitions_s": 91.1,
+            "throughput_detections_s": 4410.3
+          },
+          "hybrid": {
+            "idf1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "cross_camera_accuracy": 1.0,
+            "tp": 131,
+            "fp": 0,
+            "fn": 0,
+            "route_top1_accuracy": 0.6107,
+            "route_topk_accuracy": 0.8473,
+            "assoc_time_ms": 1438.161,
+            "throughput_transitions_s": 91.1,
+            "throughput_detections_s": 4409.7
+          }
+        }
+      },
+      "S4_24cam_150veh": {
+        "num_cameras": 24,
+        "num_vehicles": 150,
+        "num_nodes": 64,
+        "num_edges": 196,
+        "total_detections": 11388,
+        "num_blind_transitions": 232,
+        "mean_blind_distance_m": 177.07,
+        "mean_blind_duration_s": 13.82,
+        "modes": {
+          "article": {
+            "idf1": 0.6336,
+            "precision": 0.6336,
+            "recall": 0.6336,
+            "cross_camera_accuracy": 0.6336,
+            "tp": 147,
+            "fp": 85,
+            "fn": 85,
+            "route_top1_accuracy": 0.4871,
+            "route_topk_accuracy": 0.9181,
+            "assoc_time_ms": 2418.177,
+            "throughput_transitions_s": 95.9,
+            "throughput_detections_s": 4556.3
+          },
+          "chi2": {
+            "idf1": 0.3578,
+            "precision": 0.3578,
+            "recall": 0.3578,
+            "cross_camera_accuracy": 0.3578,
+            "tp": 83,
+            "fp": 149,
+            "fn": 149,
+            "route_top1_accuracy": 0.4871,
+            "route_topk_accuracy": 0.9181,
+            "assoc_time_ms": 2718.9,
+            "throughput_transitions_s": 85.3,
+            "throughput_detections_s": 4067.0
+          },
+          "reid_only": {
+            "idf1": 0.9397,
+            "precision": 0.9397,
+            "recall": 0.9397,
+            "cross_camera_accuracy": 0.9397,
+            "tp": 218,
+            "fp": 14,
+            "fn": 14,
+            "route_top1_accuracy": 0.4871,
+            "route_topk_accuracy": 0.9181,
+            "assoc_time_ms": 2712.03,
+            "throughput_transitions_s": 85.5,
+            "throughput_detections_s": 4077.0
+          },
+          "hybrid": {
+            "idf1": 1.0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "cross_camera_accuracy": 1.0,
+            "tp": 232,
+            "fp": 0,
+            "fn": 0,
+            "route_top1_accuracy": 0.4871,
+            "route_topk_accuracy": 0.9181,
+            "assoc_time_ms": 2720.894,
+            "throughput_transitions_s": 85.3,
+            "throughput_detections_s": 4064.1
+          }
+        }
+      }
+    }
   }
 }

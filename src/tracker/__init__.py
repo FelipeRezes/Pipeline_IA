@@ -18,7 +18,14 @@ from tracker.config import (
     save_config,
 )
 
-__version__ = "0.1.0"
+from tracker.sota_baselines import (
+    GRUTrajectoryPredictor,
+    LSTMTrajectoryPredictor,
+    ParticleFilter,
+    TemporalGNNPredictor,
+)
+
+__version__ = "0.2.0"
 
 __all__ = [
     "ALPRConfig",
@@ -27,11 +34,15 @@ __all__ = [
     "CameraConfig",
     "DetectorConfig",
     "EKFConfig",
+    "GRUTrajectoryPredictor",
+    "LSTMTrajectoryPredictor",
+    "ParticleFilter",
     "PipelineConfig",
     "ReIDConfig",
     "RoadGraphConfig",
     "ScenarioConfig",
     "ScenariosFileConfig",
+    "TemporalGNNPredictor",
     "VisualizerConfig",
     "__version__",
     "load_config",
