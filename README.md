@@ -1,7 +1,7 @@
 # Pipeline de Rastreamento Multicâmera, EKF Não Linear e Predição de Rotas de Fuga (v2.0)
 
 Implementação científica refatorada do zero e laboratório de validação experimental para o artigo:
-**"Modelagem Cinemática Não Linear com Filtro de Kalman Estendido e Restrições Topológicas para Predição de Rotas de Fuga em Redes Urbanas de Videovigilância Policial"** *(Medeiros et al.)*.
+**"Modelagem Cinemática Não Linear com Filtro de Kalman Estendido Adaptativo e Restrições Topológicas para Rastreamento Multicâmera e Predição de Trajetórias Veiculares em Redes Urbanas"** *(Medeiros et al.)*.
 
 ---
 
@@ -100,7 +100,7 @@ Teste em malha urbana multicâmera com 18 veículos e 42 transições por zonas 
 
 ```bash
 # 1. Rodar toda a suíte de testes unitários e de integração (14 testes)
-python -m unittest discover -s tests -v
+python -m pytest discover -s tests -v
 
 # 2. Executar os 5 Experimentos Científicos de Ablação (A1 a A5)
 python -m pipeline.cli experiments --out ablation_results.json
